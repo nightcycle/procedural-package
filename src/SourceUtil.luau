@@ -1,7 +1,10 @@
 --!strict
+-- Packages
+local IndexUtil = require(script.Parent.Parent.IndexUtil)
 -- Modules
 local ParameterUtil = require(script.Parent.ParameterUtil)
 local GeometryUtil = require(script.Parent.GeometryUtil)
+local DebugUtil = require(script.Parent.DebugUtil)
 -- Types
 local Types = require(script.Parent.Types)
 type Parameters = Types.Parameters
@@ -140,6 +143,7 @@ function Util.getCopies(
 	end
 	return copies, layoutParameters
 end
+
 function Util.prepareClone(
 	template: Template,
 	size: Vector3,
@@ -198,6 +202,54 @@ function Util.prepareClone(
 	end
 	instance:PivotTo(rotation)
 	return instance
+end
+
+function Util.run(
+	random: Random,
+	parameters: Types.Parameters,
+	extraDefaultAttributes: Types.ExtraAttributes?
+): ({ TemplateGroup }, Parameters)
+	local attributes = parameters.Attributes
+	local fullSize = parameters.Size
+	assert(fullSize.X > 0 and fullSize.Y > 0 and fullSize.Z > 0, "generation Size must have positive dimensions")
+	assert(attributes.SourcePathDelimiter ~= "", "SourcePathDelimiter must not be empty")
+	assert(attributes.SourceMaxYield >= 0, "SourceMaxYield must not be negative")
+	DebugUtil.print(`searching for source`)
+	local source =
+		IndexUtil.waitForPath(attributes.SourcePath, attributes.SourceMaxYield, attributes.SourcePathDelimiter)
+	DebugUtil.print(`finished waiting for source`)
+	assert(source, `failed to find template at path: {attributes.SourcePath}`)
+	local extraAttributes = {}
+	if extraDefaultAttributes then
+		for k, v in extraDefaultAttributes do
+			extraAttributes[k] = parameters.Attributes[k]
+		end
+	end
+	do
+		local success, msg = Types.PlacementType(attributes.RandomPlacement)
+		if not success then
+			error(`bad RandomPlacement value: {msg}`)
+		end
+	end
+	do
+		local success, msg = Types.AlignType(attributes.GeneratedAlignment)
+		if not success then
+			error(`bad GeneratedAlignment value: {msg}`)
+		end
+	end
+	do
+		local success, msg = Types.ScaleMethod(attributes.GeneratedScaleMethod)
+		if not success then
+			error(`bad GeneratedScaleMethod value: {msg}`)
+		end
+	end
+	do
+		local success, msg = Types.ScaleReference(attributes.GeneratedScaleReference)
+		if not success then
+			error(`bad GeneratedScaleReference value: {msg}`)
+		end
+	end
+	return Util.getCopies(source, parameters, random, extraAttributes)
 end
 
 return Util
