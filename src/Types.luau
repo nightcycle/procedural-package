@@ -1,6 +1,18 @@
 --!strict
 local Type = require(script.Parent.Parent.Type)
 local Types = {}
+
+export type ExtraAttributes = { [string]: any }
+export type Template = BasePart | Model
+export type Bounds = { Center: Vector3, Size: Vector3 }
+export type CallbackFn<V> = (
+	inst: Template,
+	parameters: GenerationFunctionParams<V & PackageAttributes>,
+	targetContainer: GeneratedFolder
+) -> ()
+
+export type Parameters = GenerationFunctionParams<PackageAttributes>
+export type TemplateGroup = { Template: Template, Parameters: Parameters, Count: number }
 export type AlignType = "Center" | "Floor"
 Types.AlignType = Type.literal("Center", "Floor")
 export type ScaleType = "Default" | "Fit" | "Height"
@@ -15,13 +27,13 @@ export type PackageAttributes = {
 	SourceMaxYield: number, -- how long to wait for the template to appear (if streaming enabled keep high, if not, do whatever)
 	PauseInterval: number, -- positive integer loop iterations between cooperative pauses
 	GeneratedAlignment: AlignType, -- Center aligns within a cell; Floor rests on the bottom of the generation box
-	GeneratedScale: ScaleType, -- Default sizes BaseParts to the cell and fits Models; Fit is uniform; Height matches cell height
+	GeneratedScaleType: ScaleType, -- Default sizes BaseParts to the cell and fits Models; Fit is uniform; Height matches cell height
 	GeneratedTags: string, -- tags it will add to the copies of the template in comma delimited format (aka "tag1,tag2,tag3"), spaces immediately after commas are ignored
+	GeneratedPadding: UDim, -- minimum separation between instances; a single seeded gap is sampled per generation
 	GeneratedExcludedTags: string, -- comma-delimited tags; matching candidates and their subtrees are skipped during folder selection
 	GeneratedCount: NumberRange, -- inclusive range of non-negative integer copy counts; template overrides set that selected template's total
 	RandomSeed: number, -- used to keep regeneration deterministic
-	RandomPadding: NumberRange, -- minimum separation between instances; a single seeded gap is sampled per generation
-	RandomScale: NumberRange, -- finite positive uniform scale multiplier sampled per copy after GeneratedScale; 1 preserves size
+	RandomScale: NumberRange, -- finite positive uniform scale multiplier sampled per copy after GeneratedScaleType; 1 preserves size
 	RandomRoll: NumberRange, -- X axis random rotation in degrees
 	RandomPan: NumberRange, -- Y axis random rotation in degrees
 	RandomTilt: NumberRange, -- Z axis random rotation in degrees

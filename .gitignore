@@ -1,6 +1,6 @@
 DevPackages/**
 sourcemap.json
 wally.lock
-build.rbxl
-build.rbxl.lock
+*.rbxl
+*.rbxl.lock
 Packages/**

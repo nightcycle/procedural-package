@@ -1,0 +1,27 @@
+{
+	"name": "package",
+	"tree": {
+		"$className": "DataModel",
+		"Workspace": {
+			"$className": "Workspace",
+			"map": {
+				"$path": "demo/workspace/map.rbxm"
+			},
+			"examples": {
+				"$path": "demo/workspace/examples.rbxm"
+			}
+		},
+		"ReplicatedStorage": {
+			"$className": "ReplicatedStorage",
+			"Packages": {
+				"$path": "Packages",
+				"ProceduralPackage": {
+					"$path": "src"
+				}
+			},
+			"lib": {
+				"$path": "demo/lib.rbxm"
+			}
+		}
+	}
+}
