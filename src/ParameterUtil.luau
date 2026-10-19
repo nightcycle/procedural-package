@@ -53,13 +53,14 @@ function Util.resolveTemplateAttributes(
 		)
 		resolved.GeneratedAlignment = alignment
 	end
-	local scale: unknown = template:GetAttribute("GeneratedScaleType")
-	if scale ~= nil then
+	local scaleType: unknown = template:GetAttribute("GeneratedScaleType")
+	if scaleType ~= nil then
+		local success, msg = Types.ScaleType(scaleType)
 		assert(
-			scale == "Default" or scale == "Fit" or scale == "Height",
-			`template "{template:GetFullName()}" attribute GeneratedScaleType must be Default, Fit, or Height`
+			success,
+			`template "{template:GetFullName()}" has unknown value for attribute "GeneratedScaleType": {msg}`
 		)
-		resolved.GeneratedScaleType = scale
+		resolved.GeneratedScaleType = scaleType :: any
 	end
 	resolved.GeneratedCount = Util.getRangeAttribute(template, "GeneratedCount", attributes.GeneratedCount)
 	resolved.RandomScale = Util.getRangeAttribute(template, "RandomScale", attributes.RandomScale)

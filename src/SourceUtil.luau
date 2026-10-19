@@ -161,7 +161,7 @@ function Util.prepareClone(
 		end
 	end
 	instance:PivotTo(rotation)
-	if instance:IsA("BasePart") and scaleType == "Default" then
+	if instance:IsA("BasePart") and scaleType == "Stretch" then
 		instance.Size = size
 	else
 		local _, sourceSize = GeometryUtil.getBounds(instance)
@@ -175,9 +175,15 @@ function Util.prepareClone(
 			sourceSize.X > 0 and sourceSize.Y > 0 and sourceSize.Z > 0,
 			`template "{template:GetFullName()}" must have positive dimensions`
 		)
-		local scale = if scaleType == "Height"
-			then size.Y / sourceSize.Y
-			else math.min(size.X / sourceSize.X, size.Y / sourceSize.Y, size.Z / sourceSize.Z)
+		local scale = 1
+		if scaleType == "Height" then
+			scale = size.Y / sourceSize.Y
+		else
+			scale = math.min(size.X / sourceSize.X, size.Y / sourceSize.Y, size.Z / sourceSize.Z)
+			if scaleType == "Fit" then
+				scale = math.min(scale, 1)
+			end
+		end
 		GeometryUtil.scaleInstance(instance, scale)
 	end
 	if randomScale ~= 1 then

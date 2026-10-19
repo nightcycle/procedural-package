@@ -13,12 +13,25 @@ export type CallbackFn<V> = (
 
 export type Parameters = GenerationFunctionParams<PackageAttributes>
 export type TemplateGroup = { Template: Template, Parameters: Parameters, Count: number }
+
+function betterLiteral(...: any): typeof(Type.literal())
+	local params = { ... }
+	return function(v: unknown?): boolean
+		for i, literal in params do
+			if literal == v then
+				return true
+			end
+		end
+		return false, `received "{v}", expected one of the following: {table.concat(params, ", ")}`
+	end
+end
+
 export type AlignType = "Center" | "Floor"
-Types.AlignType = Type.literal("Center", "Floor")
-export type ScaleType = "Default" | "Fit" | "Height"
-Types.ScaleType = Type.literal("Default", "Fit", "Height")
+Types.AlignType = betterLiteral("Center", "Floor")
+export type ScaleType = "Stretch" | "Fill" | "Height" | "Fit"
+Types.ScaleType = betterLiteral("Stretch", "Fill", "Height", "Fit")
 export type PlacementType = "Grid" | "Random" | "Line" -- partially constrained by AlignType
-Types.PlacementType = Type.literal("Grid", "Random", "Line")
+Types.PlacementType = betterLiteral("Grid", "Random", "Line")
 -- Templates may override PauseInterval, GeneratedAlignment/Scale/Count, and RandomScale/Roll/Pan/Tilt.
 -- Source settings, RandomSeed, tag fields, RandomPlacement, and RandomPadding stay package-controlled.
 export type PackageAttributes = {
@@ -27,7 +40,7 @@ export type PackageAttributes = {
 	SourceMaxYield: number, -- how long to wait for the template to appear (if streaming enabled keep high, if not, do whatever)
 	PauseInterval: number, -- positive integer loop iterations between cooperative pauses
 	GeneratedAlignment: AlignType, -- Center aligns within a cell; Floor rests on the bottom of the generation box
-	GeneratedScaleType: ScaleType, -- Default sizes BaseParts to the cell and fits Models; Fit is uniform; Height matches cell height
+	GeneratedScaleType: ScaleType, -- Stretch sizes BaseParts to the cell and fits Models; Fit is uniform but never increases past template size (for scale = 1), Fill is fit with increasing; Height matches cell height
 	GeneratedPadding: UDim, -- minimum separation between instances; a single seeded gap is sampled per generation
 	GeneratedExcludedTags: string, -- comma-delimited tags; matching candidates and their subtrees are skipped during folder selection
 	GeneratedCount: NumberRange, -- inclusive range of non-negative integer copy counts; template overrides set that selected template's total
