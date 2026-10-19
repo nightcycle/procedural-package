@@ -28,7 +28,6 @@ export type PackageAttributes = {
 	PauseInterval: number, -- positive integer loop iterations between cooperative pauses
 	GeneratedAlignment: AlignType, -- Center aligns within a cell; Floor rests on the bottom of the generation box
 	GeneratedScaleType: ScaleType, -- Default sizes BaseParts to the cell and fits Models; Fit is uniform; Height matches cell height
-	GeneratedTags: string, -- tags it will add to the copies of the template in comma delimited format (aka "tag1,tag2,tag3"), spaces immediately after commas are ignored
 	GeneratedPadding: UDim, -- minimum separation between instances; a single seeded gap is sampled per generation
 	GeneratedExcludedTags: string, -- comma-delimited tags; matching candidates and their subtrees are skipped during folder selection
 	GeneratedCount: NumberRange, -- inclusive range of non-negative integer copy counts; template overrides set that selected template's total

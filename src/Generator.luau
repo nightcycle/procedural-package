@@ -4,7 +4,6 @@ local IndexUtil = require(script.Parent.Parent.IndexUtil)
 -- Modules
 local ENV = require(script.Parent.ENV)
 local SourceUtil = require(script.Parent.SourceUtil)
-local ParameterUtil = require(script.Parent.ParameterUtil)
 local PlacementUtil = require(script.Parent.PlacementUtil)
 local GeometryUtil = require(script.Parent.GeometryUtil)
 local DebugUtil = require(script.Parent.DebugUtil)
@@ -31,7 +30,6 @@ function newGenerator(
 		GeneratedAlignment = ENV.DEFAULT_GENERATED_ALIGNMENT,
 		GeneratedScaleType = ENV.DEFAULT_GENERATED_SCALE_TYPE,
 		GeneratedPadding = ENV.DEFAULT_GENERATED_PADDING,
-		GeneratedTags = ENV.DEFAULT_GENERATED_TAGS,
 		GeneratedExcludedTags = ENV.DEFAULT_GENERATED_EXCLUDED_TAGS,
 		GeneratedCount = ENV.DEFAULT_GENERATED_COUNT,
 		RandomSeed = ENV.DEFAULT_RANDOM_SEED,
@@ -119,8 +117,6 @@ function newGenerator(
 			if attributes.RandomPlacement == "Random" then
 				random:Shuffle(cells)
 			end
-			local tags = ParameterUtil.parseTags(attributes.GeneratedTags)
-
 			local placed: { Bounds } = {}
 			local generatedByTemplate: { [Instance]: number } = {}
 			for index, copy in copies do
@@ -170,9 +166,6 @@ function newGenerator(
 				table.insert(placed, { Center = center, Size = boundsSize })
 				-- Align the geometry, including templates with an offset pivot.
 				instance:PivotTo(CFrame.new(center - boundsCenter) * instance:GetPivot())
-				for _, tag in tags do
-					instance:AddTag(tag)
-				end
 				if fn then
 					fn(instance, layoutParameters, targetContainer)
 				end
