@@ -22,7 +22,8 @@ type Env = {
 	DEFAULT_RANDOM_PAN: NumberRange,
 	DEFAULT_RANDOM_TILT: NumberRange,
 	DEFAULT_RANDOM_PLACEMENT: Types.PlacementType,
-	DEFAULT_SMALL: number,
+	SMALL: number,
+	IS_DEBUG_MODE: boolean,
 	[any]: nil,
 }
 -- Constants
@@ -49,10 +50,14 @@ local DEFAULT_ENV: Env = {
 	DEFAULT_RANDOM_PAN = NumberRange.new(0),
 	DEFAULT_RANDOM_TILT = NumberRange.new(0),
 	DEFAULT_RANDOM_PLACEMENT = "Grid",
-	DEFAULT_SMALL = 0.0001,
+	SMALL = 0.0001,
+	IS_DEBUG_MODE = false,
 }
 local out: Env = setmetatable({}, {
 	__index = function(_, readableKey: string): any?
+		if readableKey == "IS_DEBUG_MODE" then
+			return workspace:HasTag("IS_PROC_PACKAGE_DEBUG_MODE")
+		end
 		local k = PREFIX .. readableKey
 		local v = _G[k]
 		local dV = rawget(DEFAULT_ENV, readableKey)

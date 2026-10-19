@@ -4,6 +4,13 @@
 		"$className": "DataModel",
 		"Workspace": {
 			"$className": "Workspace",
+			"$properties": {
+				"Tags": {
+					"Tags": [
+						"IS_PROC_PACKAGE_DEBUG_MODE"
+					]
+				}
+			},
 			"map": {
 				"$path": "demo/workspace/map.rbxm"
 			},

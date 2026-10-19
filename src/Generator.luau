@@ -7,6 +7,7 @@ local SourceUtil = require(script.Parent.SourceUtil)
 local ParameterUtil = require(script.Parent.ParameterUtil)
 local PlacementUtil = require(script.Parent.PlacementUtil)
 local GeometryUtil = require(script.Parent.GeometryUtil)
+local DebugUtil = require(script.Parent.DebugUtil)
 -- Types
 local Types = require(script.Parent.Types)
 type ExtraAttributes = Types.ExtraAttributes
@@ -50,9 +51,11 @@ function newGenerator(
 	return {
 		Attributes = defaultAttributes,
 		OnGenerate = function(parameters: Parameters, targetContainer: GeneratedFolder): ()
+			DebugUtil.print("generating")
 			targetContainer.Archivable = false
 			local attributes = parameters.Attributes
 			if attributes.SourcePath == "" then
+				warn(`no SourcePath set`)
 				return
 			end
 			local fullSize = parameters.Size
@@ -63,8 +66,10 @@ function newGenerator(
 			assert(attributes.SourcePathDelimiter ~= "", "SourcePathDelimiter must not be empty")
 			assert(attributes.SourceMaxYield >= 0, "SourceMaxYield must not be negative")
 			local random = Random.new(attributes.RandomSeed)
+			DebugUtil.print(`searching for source`)
 			local source =
 				IndexUtil.waitForPath(attributes.SourcePath, attributes.SourceMaxYield, attributes.SourcePathDelimiter)
+			DebugUtil.print(`finished waiting for source`)
 			assert(source, `failed to find template at path: {attributes.SourcePath}`)
 			local extraAttributes = {}
 			if extraDefaultAttributes then
@@ -101,7 +106,7 @@ function newGenerator(
 			local paddingDimMag = math.min(outerCellSize.X, outerCellSize.Z)
 					* layoutParameters.Attributes.GeneratedPadding.Scale
 				+ layoutParameters.Attributes.GeneratedPadding.Offset
-			local innerCellSize = (Vector3.one * ENV.DEFAULT_SMALL):Max(
+			local innerCellSize = (Vector3.one * ENV.SMALL):Max(
 				outerCellSize - (Vector3.one * 2 * paddingDimMag)
 			)
 			local cells: { number } = {}

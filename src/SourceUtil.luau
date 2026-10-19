@@ -160,6 +160,11 @@ function Util.prepareClone(
 			instance.WorldPivot = instance:GetPivot() * pivotOffset
 		end
 	end
+	if instance:IsA("Model") then
+		instance.Archivable = false
+	else
+		instance.Archivable = false
+	end
 	instance:PivotTo(rotation)
 	if instance:IsA("BasePart") and scaleType == "Default" then
 		instance.Size = size
