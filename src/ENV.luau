@@ -26,7 +26,7 @@ type Env = {
 	[any]: never,
 }
 -- Constants
-local PREFIX = "__LOCALPACKAGE__"
+local PREFIX = "__PROCEDURALPACKAGE__"
 -- Variables
 -- References
 -- Private Functions
