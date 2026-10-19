@@ -1,4 +1,4 @@
-# local-package
+# procedural-package
 
 Using ProceduralModels to get flexible source referencing.
 

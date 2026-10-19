@@ -1,5 +1,5 @@
 [package]
-name = "nightcycle/local-package"
+name = "nightcycle/procedural-package"
 description = "using procedural models to create local packages"
 version = "0.1.0"
 license = "Apache"
