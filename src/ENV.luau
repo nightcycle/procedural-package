@@ -1,5 +1,4 @@
 --!strict
-local RunService = game:GetService("RunService")
 -- Services
 -- Packages
 -- Modules
@@ -12,7 +11,8 @@ type Env = {
 	DEFAULT_SOURCE_PATH_DELIMITER: string,
 	DEFAULT_SOURCE_MAX_YIELD: number,
 	DEFAULT_GENERATED_ALIGNMENT: Types.AlignType,
-	DEFAULT_GENERATED_SCALE_TYPE: Types.ScaleType,
+	DEFAULT_GENERATED_SCALE_METHOD: Types.ScaleMethod,
+	DEFAULT_GENERATED_SCALE_REFERENCE: Types.ScaleReference,
 	DEFAULT_GENERATED_PADDING: UDim,
 	DEFAULT_GENERATED_EXCLUDED_TAGS: string,
 	DEFAULT_GENERATED_COUNT: NumberRange,
@@ -43,7 +43,8 @@ local DEFAULT_ENV: Env = {
 	DEFAULT_SOURCE_MAX_YIELD = 15,
 	DEFAULT_GENERATED_ALIGNMENT = "Floor",
 	DEFAULT_GENERATED_PADDING = UDim.new(0.1, 0),
-	DEFAULT_GENERATED_SCALE_TYPE = "Stretch",
+	DEFAULT_GENERATED_SCALE_METHOD = "Stretch",
+	DEFAULT_GENERATED_SCALE_REFERENCE = "Min",
 	DEFAULT_GENERATED_EXCLUDED_TAGS = "",
 	DEFAULT_GENERATED_COUNT = NumberRange.new(1),
 	DEFAULT_RANDOM_SEED = 0,
@@ -53,10 +54,10 @@ local DEFAULT_ENV: Env = {
 	DEFAULT_RANDOM_TILT = NumberRange.new(0),
 	DEFAULT_RANDOM_PLACEMENT = "Grid",
 	SMALL = 0.0001,
-	DEBUG_PRINT_ENABLED = false,
-	DEBUG_AREA_ENABLED = false,
-	DEBUG_OUTER_CELL_ENABLED = false,
-	DEBUG_INNER_CELL_ENABLED = false,
+	DEBUG_PRINT_ENABLED = workspace:HasTag("IS_PROC_PACKAGE_DEBUG_PRINT"),
+	DEBUG_AREA_ENABLED = workspace:HasTag("IS_PROC_PACKAGE_DEBUG_MODE"),
+	DEBUG_OUTER_CELL_ENABLED = workspace:HasTag("IS_PROC_PACKAGE_DEBUG_MODE"),
+	DEBUG_INNER_CELL_ENABLED = workspace:HasTag("IS_PROC_PACKAGE_DEBUG_MODE"),
 }
 local out: Env = setmetatable({}, {
 	__index = function(_, readableKey: string): any?
@@ -65,18 +66,6 @@ local out: Env = setmetatable({}, {
 		local dV = rawget(DEFAULT_ENV, readableKey)
 		if dV == nil then
 			error(`Attempt to access undefined key "{readableKey}" in ENV`)
-		end
-		if (v :: any) ~= true then
-			if not RunService:IsRunning() then
-				if
-					readableKey == "DEBUG_PRINT_ENABLED"
-					or readableKey == "DEBUG_OUTER_CELL_ENABLED"
-					or readableKey == "DEBUG_INNER_CELL_ENABLED"
-					or readableKey == "DEBUG_AREA_ENABLED"
-				then
-					return workspace:HasTag("IS_PROC_PACKAGE_DEBUG_MODE")
-				end
-			end
 		end
 		if typeof(v) == "string" then
 			if typeof(dV) == "boolean" then

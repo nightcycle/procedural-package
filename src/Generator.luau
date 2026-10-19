@@ -28,7 +28,8 @@ function newGenerator(
 		SourceMaxYield = ENV.DEFAULT_SOURCE_MAX_YIELD,
 		PauseInterval = ENV.DEFAULT_PAUSE_INTERVAL,
 		GeneratedAlignment = ENV.DEFAULT_GENERATED_ALIGNMENT,
-		GeneratedScaleType = ENV.DEFAULT_GENERATED_SCALE_TYPE,
+		GeneratedScaleMethod = ENV.DEFAULT_GENERATED_SCALE_METHOD,
+		GeneratedScaleReference = ENV.DEFAULT_GENERATED_SCALE_REFERENCE,
 		GeneratedPadding = ENV.DEFAULT_GENERATED_PADDING,
 		GeneratedExcludedTags = ENV.DEFAULT_GENERATED_EXCLUDED_TAGS,
 		GeneratedCount = ENV.DEFAULT_GENERATED_COUNT,
@@ -88,9 +89,15 @@ function newGenerator(
 				end
 			end
 			do
-				local success, msg = Types.ScaleType(attributes.GeneratedScaleType)
+				local success, msg = Types.ScaleMethod(attributes.GeneratedScaleMethod)
 				if not success then
-					error(`bad GeneratedScaleType value: {msg}`)
+					error(`bad GeneratedScaleMethod value: {msg}`)
+				end
+			end
+			do
+				local success, msg = Types.ScaleReference(attributes.GeneratedScaleReference)
+				if not success then
+					error(`bad GeneratedScaleReference value: {msg}`)
 				end
 			end
 			local copies, layoutParameters = SourceUtil.getCopies(source, parameters, random, extraAttributes)
@@ -134,7 +141,8 @@ function newGenerator(
 					template,
 					innerCellSize,
 					rotation,
-					copyAttributes.GeneratedScaleType,
+					copyAttributes.GeneratedScaleMethod,
+					copyAttributes.GeneratedScaleReference,
 					randomScale
 				)
 				local boundsCenter, boundsSize = GeometryUtil.getBounds(instance)
@@ -194,8 +202,7 @@ function newGenerator(
 				end
 			end
 			if ENV.DEBUG_AREA_ENABLED then
-				local part, box =
-					DebugUtil.debugRegion(CFrame.new(0, 0, 0), parameters.Size, Color3.new(1, 1, 0))
+				local part, box = DebugUtil.debugRegion(CFrame.new(0, 0, 0), parameters.Size, Color3.new(1, 1, 0))
 				box.LineThickness *= 2
 				part.Name = `Area`
 				part.Parent = targetContainer

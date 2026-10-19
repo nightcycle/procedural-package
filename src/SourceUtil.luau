@@ -144,7 +144,8 @@ function Util.prepareClone(
 	template: Template,
 	size: Vector3,
 	rotation: CFrame,
-	scaleType: Types.ScaleType,
+	scaleMethod: Types.ScaleMethod,
+	scaleRef: Types.ScaleReference,
 	randomScale: number
 ): Template
 	assert(template.Archivable, `template "{template:GetFullName()}" must be Archivable`)
@@ -161,7 +162,7 @@ function Util.prepareClone(
 		end
 	end
 	instance:PivotTo(rotation)
-	if instance:IsA("BasePart") and scaleType == "Stretch" then
+	if instance:IsA("BasePart") and scaleMethod == "Stretch" then
 		instance.Size = size
 	else
 		local _, sourceSize = GeometryUtil.getBounds(instance)
@@ -176,13 +177,19 @@ function Util.prepareClone(
 			`template "{template:GetFullName()}" must have positive dimensions`
 		)
 		local scale = 1
-		if scaleType == "Height" then
+		if scaleRef == "Height" then
 			scale = size.Y / sourceSize.Y
-		else
+		elseif scaleRef == "Min" then
 			scale = math.min(size.X / sourceSize.X, size.Y / sourceSize.Y, size.Z / sourceSize.Z)
-			if scaleType == "Fit" then
-				scale = math.min(scale, 1)
-			end
+		elseif scaleRef == "Max" then
+			scale = math.max(size.X / sourceSize.X, size.Y / sourceSize.Y, size.Z / sourceSize.Z)
+		elseif scaleRef == "Average" then
+			scale = ((size.X / sourceSize.X) + (size.Y / sourceSize.Y) + (size.Z / sourceSize.Z)) / 3
+		else
+			error(`unknown scale ref: "{scaleRef}"`)
+		end
+		if scaleMethod == "Fit" then
+			scale = math.min(scale, 1)
 		end
 		GeometryUtil.scaleInstance(instance, scale)
 	end
