@@ -1,4 +1,5 @@
 --!strict
+local RunService = game:GetService("RunService")
 -- Services
 -- Packages
 -- Modules
@@ -22,7 +23,10 @@ type Env = {
 	DEFAULT_RANDOM_TILT: NumberRange,
 	DEFAULT_RANDOM_PLACEMENT: Types.PlacementType,
 	SMALL: number,
-	IS_DEBUG_MODE: boolean,
+	DEBUG_PRINT_ENABLED: boolean,
+	DEBUG_AREA_ENABLED: boolean,
+	DEBUG_OUTER_CELL_ENABLED: boolean,
+	DEBUG_INNER_CELL_ENABLED: boolean,
 	[any]: nil,
 }
 -- Constants
@@ -49,18 +53,30 @@ local DEFAULT_ENV: Env = {
 	DEFAULT_RANDOM_TILT = NumberRange.new(0),
 	DEFAULT_RANDOM_PLACEMENT = "Grid",
 	SMALL = 0.0001,
-	IS_DEBUG_MODE = false,
+	DEBUG_PRINT_ENABLED = false,
+	DEBUG_AREA_ENABLED = false,
+	DEBUG_OUTER_CELL_ENABLED = false,
+	DEBUG_INNER_CELL_ENABLED = false,
 }
 local out: Env = setmetatable({}, {
 	__index = function(_, readableKey: string): any?
-		if readableKey == "IS_DEBUG_MODE" then
-			return workspace:HasTag("IS_PROC_PACKAGE_DEBUG_MODE")
-		end
 		local k = PREFIX .. readableKey
 		local v = _G[k]
 		local dV = rawget(DEFAULT_ENV, readableKey)
 		if dV == nil then
 			error(`Attempt to access undefined key "{readableKey}" in ENV`)
+		end
+		if (v :: any) ~= true then
+			if not RunService:IsRunning() then
+				if
+					readableKey == "DEBUG_PRINT_ENABLED"
+					or readableKey == "DEBUG_OUTER_CELL_ENABLED"
+					or readableKey == "DEBUG_INNER_CELL_ENABLED"
+					or readableKey == "DEBUG_AREA_ENABLED"
+				then
+					return workspace:HasTag("IS_PROC_PACKAGE_DEBUG_MODE")
+				end
+			end
 		end
 		if typeof(v) == "string" then
 			if typeof(dV) == "boolean" then

@@ -13,6 +13,7 @@ type ExtraAttributes = Types.ExtraAttributes
 -- Class
 local Util = {}
 function Util.scaleInstance(instance: Template, scale: number)
+	instance:SetAttribute("Scale", scale)
 	if instance:IsA("BasePart") then
 		instance.Size *= scale
 		local offset = instance.PivotOffset
@@ -41,4 +42,3 @@ function Util.getBounds(instance: Template): (Vector3, Vector3)
 end
 
 return Util
-

@@ -36,4 +36,5 @@ function Util.getGrid(size: Vector3, count: number, parameters: Parameters): Vec
 	end
 	return Vector3.new(x, y, z)
 end
+
 return Util

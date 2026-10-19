@@ -104,9 +104,7 @@ function newGenerator(
 			local paddingDimMag = math.min(outerCellSize.X, outerCellSize.Z)
 					* layoutParameters.Attributes.GeneratedPadding.Scale
 				+ layoutParameters.Attributes.GeneratedPadding.Offset
-			local innerCellSize = (Vector3.one * ENV.SMALL):Max(
-				outerCellSize - (Vector3.one * 2 * paddingDimMag)
-			)
+			local innerCellSize = (Vector3.one * ENV.SMALL):Max(outerCellSize - (Vector3.one * 2 * paddingDimMag))
 			local cells: { number } = {}
 			for index = 1, grid.X * grid.Y * grid.Z do
 				cells[index] = index - 1
@@ -147,6 +145,7 @@ function newGenerator(
 					math.floor(cellIndex / grid.X) % grid.Z
 				)
 				local center = -fullSize / 2 + outerCellSize / 2 + coordinates * outerCellSize
+
 				if attributes.RandomPlacement == "Random" then
 					local available = Vector3.new(
 						math.max(0, innerCellSize.X - boundsSize.X),
@@ -164,17 +163,45 @@ function newGenerator(
 					center = Vector3.new(center.X, cellBottom + boundsSize.Y / 2, center.Z)
 				end
 				table.insert(placed, { Center = center, Size = boundsSize })
-				-- Align the geometry, including templates with an offset pivot.
 				instance:PivotTo(CFrame.new(center - boundsCenter) * instance:GetPivot())
 				if fn then
 					fn(instance, layoutParameters, targetContainer)
 				end
 				(instance :: Instance).Parent = targetContainer
+
+				if ENV.DEBUG_OUTER_CELL_ENABLED then
+					local part, _box = DebugUtil.debugRegion(CFrame.new(center), outerCellSize, Color3.new(1, 0, 0))
+					part.Name = `Outer`
+					part.Parent = instance
+				end
+				if ENV.DEBUG_INNER_CELL_ENABLED then
+					do
+						local _templateCenter, tempateSize = GeometryUtil.getBounds(template)
+						local part, _box = DebugUtil.debugRegion(CFrame.new(center), tempateSize, Color3.new(0, 1, 1))
+						part.Name = `Original`
+						part.Parent = instance
+					end
+					do
+						local part, _box = DebugUtil.debugRegion(CFrame.new(center), innerCellSize, Color3.new(0, 0, 1))
+						part.Name = `Inner`
+						part.Parent = instance
+					end
+				end
 				local generated = (generatedByTemplate[template] or 0) + 1
 				generatedByTemplate[template] = generated
 				if generated % copyAttributes.PauseInterval == 0 then
 					copyParameters:Pause()
 				end
+			end
+			if ENV.DEBUG_AREA_ENABLED then
+				local part, box =
+					DebugUtil.debugRegion(CFrame.new(0, 0, 0), parameters.Size, Color3.new(1, 1, 0))
+				box.LineThickness *= 2
+				part.Name = `Area`
+				part.Parent = targetContainer
+			end
+			for i, v in targetContainer:GetDescendants() do
+				v.Archivable = false
 			end
 		end,
 	}

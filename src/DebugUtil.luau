@@ -13,8 +13,33 @@ type ExtraAttributes = Types.ExtraAttributes
 local Util = {}
 
 Util.print = function(...)
-	if ENV.IS_DEBUG_MODE then
+	if ENV.DEBUG_PRINT_ENABLED then
 		print(...)
 	end
+end
+
+Util.debugBox = function(parent: Instance, color: Color3): SelectionBox
+	local selectionBox = Instance.new("SelectionBox")
+	selectionBox.Color3 = color
+	selectionBox.SurfaceColor3 = color
+	selectionBox.Parent = parent
+	return selectionBox
+end
+
+Util.debugRegion = function(cf: CFrame, size: Vector3, color: Color3): (Part, SelectionBox)
+	local part = Instance.new("Part")
+	part.CFrame = cf
+	part.Size = size
+	part.Transparency = 1
+	part.CanCollide = false
+	part.CanQuery = false
+	part.CanTouch = false
+
+	local selectionBox = Instance.new("SelectionBox")
+	selectionBox.Color3 = color
+	selectionBox.SurfaceColor3 = color
+	selectionBox.Adornee = part
+	selectionBox.Parent = part
+	return part, selectionBox
 end
 return Util
