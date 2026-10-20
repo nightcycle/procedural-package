@@ -7,9 +7,7 @@ local DebugUtil = require(script.Parent.DebugUtil)
 -- Types
 local Types = require(script.Parent.Types)
 type Parameters = Types.Parameters
-type Template = Types.Template
 type TemplateGroup = Types.TemplateGroup
-type ExtraAttributes = Types.ExtraAttributes
 type Bounds = Types.Bounds
 -- Constants
 -- Private Functions
@@ -115,7 +113,7 @@ function Util.runGrid(
 			center = Vector3.new(center.X, cellBottom + boundsSize.Y / 2, center.Z)
 		end
 		table.insert(placed, { Center = center, Size = boundsSize })
-		instance:PivotTo(CFrame.new(center - boundsCenter) * instance:GetPivot())
+		instance:PivotTo(CFrame.new(center - boundsCenter.Position) * instance:GetPivot())
 		if fn then
 			fn(instance, parameters, targetContainer)
 		end
@@ -132,18 +130,34 @@ function Util.runGrid(
 				part.Name = `Outer`
 				part.Parent = instance
 			end
+			if ENV.DEBUG_BOUNDS_ENABLED then
+				local _templateCenter, instSize = GeometryUtil.getBounds(instance)
+				local part, _box = DebugUtil.debugRegion(
+					if parameters.Attributes.GeneratedAlignment == "Center"
+						then CFrame.new(center.X, 0, center.Z)
+						else CFrame.new(center.X, boundsSize.Y / 2 - fullSize.Y / 2, center.Z),
+					boundsSize,
+					Color3.new(1, 0, 1)
+				)
+				part.Name = `Bounds`
+				part.Parent = instance
+			end
+			if ENV.DEBUG_TEMPLATE_BOUNDS_ENABLED then
+				local _templateCenter, tempateSize = GeometryUtil.getBounds(template)
+				local part, _box = DebugUtil.debugRegion(
+					if parameters.Attributes.GeneratedAlignment == "Center"
+						then CFrame.new(center.X, 0, center.Z)
+						else CFrame.new(center.X, tempateSize.Y / 2 - fullSize.Y / 2, center.Z),
+					tempateSize,
+					Color3.new(0, 1, 1)
+				)
+				part.Name = `Template`
+				part.Parent = instance
+			end
 			if ENV.DEBUG_INNER_CELL_ENABLED then
-				do
-					local _templateCenter, tempateSize = GeometryUtil.getBounds(template)
-					local part, _box = DebugUtil.debugRegion(CFrame.new(center), tempateSize, Color3.new(0, 1, 1))
-					part.Name = `Original`
-					part.Parent = instance
-				end
-				do
-					local part, _box = DebugUtil.debugRegion(CFrame.new(center), innerCellSize, Color3.new(0, 0, 1))
-					part.Name = `Inner`
-					part.Parent = instance
-				end
+				local part, _box = DebugUtil.debugRegion(CFrame.new(center), innerCellSize, Color3.new(0, 0, 1))
+				part.Name = `Inner`
+				part.Parent = instance
 			end
 		end
 	end

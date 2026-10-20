@@ -1,11 +1,9 @@
 --!strict
 -- Packages
-local IndexUtil = require(script.Parent.Parent.IndexUtil)
 -- Modules
 local ENV = require(script.Parent.ENV)
 local SourceUtil = require(script.Parent.SourceUtil)
 local PlacementUtil = require(script.Parent.PlacementUtil)
-local GeometryUtil = require(script.Parent.GeometryUtil)
 local DebugUtil = require(script.Parent.DebugUtil)
 -- Types
 local Types = require(script.Parent.Types)
@@ -77,9 +75,6 @@ function newGenerator(
 				box.LineThickness *= 2
 				part.Name = `Area`
 				part.Parent = targetContainer
-			end
-			for i, v in targetContainer:GetDescendants() do
-				v.Archivable = false
 			end
 		end,
 	}

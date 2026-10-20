@@ -5,8 +5,6 @@ local ENV = require(script.Parent.ENV)
 local Types = require(script.Parent.Types)
 type Parameters = Types.Parameters
 type Template = Types.Template
-type TemplateGroup = Types.TemplateGroup
-type ExtraAttributes = Types.ExtraAttributes
 -- Constants
 -- Private Functions
 
@@ -30,7 +28,7 @@ function Util.axisAlignedSize(frame: CFrame, size: Vector3): Vector3
 		math.abs(right.Z) * size.X + math.abs(up.Z) * size.Y + math.abs(look.Z) * size.Z
 	)
 end
-function Util.getBounds(instance: Template): (Vector3, Vector3)
+function Util.getBounds(instance: Template): (CFrame, Vector3)
 	local frame: CFrame
 	local size: Vector3
 	if instance:IsA("BasePart") then
@@ -38,7 +36,7 @@ function Util.getBounds(instance: Template): (Vector3, Vector3)
 	else
 		frame, size = instance:GetBoundingBox()
 	end
-	return frame.Position, Util.axisAlignedSize(frame, size)
+	return frame, Util.axisAlignedSize(frame, size)
 end
 
 return Util

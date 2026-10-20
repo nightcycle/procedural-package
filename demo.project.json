@@ -7,7 +7,7 @@
 			"$properties": {
 				"Tags": {
 					"Tags": [
-						"IS_PROC_PACKAGE_DEBUG_MODE"
+						"PROC_PACKAGE_DEBUG_ENABLED"
 					]
 				}
 			},
