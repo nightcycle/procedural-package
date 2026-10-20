@@ -150,7 +150,8 @@ function Util.prepareClone(
 	rotation: CFrame,
 	scaleMethod: Types.ScaleMethod,
 	scaleRef: Types.ScaleReference,
-	randomScale: number
+	randomScale: number,
+	padding: UDim
 ): Template
 	assert(template.Archivable, `template "{template:GetFullName()}" must be Archivable`)
 	local instance = template:Clone()
@@ -165,7 +166,7 @@ function Util.prepareClone(
 			instance.WorldPivot = instance:GetPivot() * pivotOffset
 		end
 	end
-	instance:PivotTo(rotation)
+	size -= padding.Offset * Vector3.one * 2
 	if instance:IsA("BasePart") and scaleMethod == "Stretch" then
 		instance.Size = size
 	else
@@ -180,6 +181,7 @@ function Util.prepareClone(
 			sourceSize.X > 0 and sourceSize.Y > 0 and sourceSize.Z > 0,
 			`template "{template:GetFullName()}" must have positive dimensions`
 		)
+
 		local scale = 1
 		if scaleRef == "Height" then
 			scale = size.Y / sourceSize.Y
@@ -195,6 +197,7 @@ function Util.prepareClone(
 		if scaleMethod == "Fit" then
 			scale = math.min(scale, 1)
 		end
+		scale *= (1 - padding.Scale * 2)
 		GeometryUtil.scaleInstance(instance, scale)
 	end
 	if randomScale ~= 1 then

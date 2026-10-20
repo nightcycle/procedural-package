@@ -80,6 +80,7 @@ function Util.resolveTemplateAttributes(
 			resolved[k] = tempV
 		end
 	end
+	resolved.GeneratedScaleMethod = if resolved.RandomPlacement == "Random" then "Fit" else resolved.GeneratedScaleMethod
 	return resolved
 end
 
