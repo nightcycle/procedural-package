@@ -42,5 +42,6 @@ if [ "$PROJECT" = "dev.project.json" ]; then
 fi
 
 # asphalt sync --target studio
+rojo sourcemap "$PROJECT" --output "$SOURCEMAP"
 
 rojo build "$PROJECT" --output "$BUILD_FILE"
