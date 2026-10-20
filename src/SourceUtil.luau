@@ -168,7 +168,11 @@ function Util.prepareClone(
 	end
 	size -= padding.Offset * Vector3.one * 2
 	if instance:IsA("BasePart") and scaleMethod == "Stretch" then
-		instance.Size = size
+		local rescale = size / instance.Size
+		local baseOffset = instance.PivotOffset
+		instance.Size *= rescale
+		instance.PivotOffset =
+			CFrame.fromMatrix(baseOffset.Position * rescale, baseOffset.XVector, baseOffset.YVector, baseOffset.ZVector)
 	else
 		local _, sourceSize = GeometryUtil.getBounds(instance)
 		local sizeOverride = template:GetAttribute("Size")
@@ -191,8 +195,8 @@ function Util.prepareClone(
 			scale = math.max(size.X / sourceSize.X, size.Y / sourceSize.Y, size.Z / sourceSize.Z)
 		elseif scaleRef == "Average" then
 			scale = ((size.X / sourceSize.X) + (size.Y / sourceSize.Y) + (size.Z / sourceSize.Z)) / 3
-		else
-			error(`unknown scale ref: "{scaleRef}"`)
+		else -- stretch for models
+			scale = math.min(size.X / sourceSize.X, size.Y / sourceSize.Y, size.Z / sourceSize.Z)
 		end
 		if scaleMethod == "Fit" then
 			scale = math.min(scale, 1)

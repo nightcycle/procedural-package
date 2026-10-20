@@ -13,13 +13,20 @@ type Bounds = Types.Bounds
 -- Private Functions
 function solveInstance(copy: TemplateGroup, size: Vector3, random: Random, padding: UDim)
 	local template = copy.Template
+
 	local rotation = CFrame.Angles(
 		math.rad(
-			random:NextNumber(copy.Parameters.Attributes.RandomRoll.Min, copy.Parameters.Attributes.RandomRoll.Max)
+			(random:NextNumber(copy.Parameters.Attributes.RandomRoll.Min, copy.Parameters.Attributes.RandomRoll.Max))
 		),
-		math.rad(random:NextNumber(copy.Parameters.Attributes.RandomPan.Min, copy.Parameters.Attributes.RandomPan.Max)),
-		math.rad(
-			random:NextNumber(copy.Parameters.Attributes.RandomTilt.Min, copy.Parameters.Attributes.RandomTilt.Max)
+		(
+			math.rad(
+				random:NextNumber(copy.Parameters.Attributes.RandomPan.Min, copy.Parameters.Attributes.RandomPan.Max)
+			)
+		),
+		(
+			math.rad(
+				random:NextNumber(copy.Parameters.Attributes.RandomTilt.Min, copy.Parameters.Attributes.RandomTilt.Max)
+			)
 		)
 	)
 	local scaleRange = copy.Parameters.Attributes.RandomScale

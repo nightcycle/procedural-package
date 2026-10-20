@@ -53,6 +53,7 @@ export type PackageAttributes = {
 	RandomPan: NumberRange, -- Y axis random rotation in degrees
 	RandomTilt: NumberRange, -- Z axis random rotation in degrees
 	RandomPlacement: PlacementType, -- Grid is X/Z on Floor or X/Y/Z in Center; Line follows X; Random shuffles and jitters cells
+	PackageVersion: number, --used for backward compatibility
 }
 
 export type GenerationFunctionParams<Attributes> = {

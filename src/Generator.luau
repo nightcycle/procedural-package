@@ -37,6 +37,7 @@ function newGenerator(
 		RandomPan = ENV.DEFAULT_RANDOM_PAN,
 		RandomTilt = ENV.DEFAULT_RANDOM_TILT,
 		RandomPlacement = ENV.DEFAULT_RANDOM_PLACEMENT,
+		PackageVersion = 1,
 	}
 	if extraDefaultAttributes then
 		for k, v in extraDefaultAttributes do
