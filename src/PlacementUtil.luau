@@ -3,6 +3,7 @@
 local ENV = require(script.Parent.ENV)
 local SourceUtil = require(script.Parent.SourceUtil)
 local GeometryUtil = require(script.Parent.GeometryUtil)
+local SurfaceUtil = require(script.Parent.SurfaceUtil)
 local DebugUtil = require(script.Parent.DebugUtil)
 -- Types
 local Types = require(script.Parent.Types)
@@ -78,7 +79,8 @@ function Util.runGrid(
 	copies: { TemplateGroup },
 	random: Random,
 	targetContainer: GeneratedFolder,
-	fn: Types.CallbackFn<any>?
+	fn: Types.CallbackFn<any>?,
+	model: ProceduralModel?
 ): ()
 	local attributes = parameters.Attributes
 	local fullSize = parameters.Size
@@ -99,6 +101,13 @@ function Util.runGrid(
 	local generatedByTemplate: { [Instance]: number } = {}
 
 	for index, copy in copies do
+		-- Count attempts so an all-miss generation still yields cooperatively.
+		local generated = (generatedByTemplate[copy.Template] or 0) + 1
+		generatedByTemplate[copy.Template] = generated
+		if generated % copy.Parameters.Attributes.PauseInterval == 0 then
+			copy.Parameters:Pause()
+		end
+		local copyAttributes = copy.Parameters.Attributes
 		local instance = solveInstance(copy, outerCellSize, random, parameters.Attributes.GeneratedPadding)
 		local innerCellCenter, innerCellSize = GeometryUtil.getBounds(instance)
 		local cellIndex = cells[index]
@@ -117,30 +126,34 @@ function Util.runGrid(
 			)
 			center += Vector3.new(
 				random:NextNumber(-0.5, 0.5) * available.X,
-				if attributes.GeneratedAlignment ~= "Floor" then random:NextNumber(-0.5, 0.5) * available.Y else 0,
+				if copyAttributes.GeneratedAlignment ~= "Floor" then random:NextNumber(-0.5, 0.5) * available.Y else 0,
 				random:NextNumber(-0.5, 0.5) * available.Z
 			)
 		end
-		if attributes.GeneratedAlignment == "Floor" then
-			center -= Vector3.new(0, outerCellSize.Y / 2, 0)
+		local detectionCellCenter = outerCellCenter
+		if copyAttributes.GeneratedAlignment == "Floor" then
+			center = Vector3.new(center.X, -fullSize.Y / 2, center.Z)
 			outerCellCenter -= Vector3.new(0, outerCellSize.Y / 2, 0)
 		end
 		local origin = CFrame.new(center) * instance:GetPivot().Rotation
+		local detectedOrigin =
+			SurfaceUtil.detect(instance, origin, copyAttributes, detectionCellCenter, outerCellSize, fullSize, model)
+		if not detectedOrigin then
+			instance:Destroy()
+			continue
+		end
+		origin = detectedOrigin
 		local pivotOffset = copy.Template:GetAttribute("PivotOffset")
 		if typeof(pivotOffset) == "CFrame" then
 			origin *= pivotOffset
 		end
+		center = origin.Position
 		instance:PivotTo(origin)
 		if fn then
 			fn(instance, parameters, targetContainer)
 		end
 		(instance :: Instance).Parent = targetContainer
 
-		local generated = (generatedByTemplate[copy.Template] or 0) + 1
-		generatedByTemplate[copy.Template] = generated
-		if generated % copy.Parameters.Attributes.PauseInterval == 0 then
-			copy.Parameters:Pause()
-		end
 		do
 			if ENV.DEBUG_OUTER_CELL_ENABLED then
 				local part, _box =

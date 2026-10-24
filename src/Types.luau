@@ -28,6 +28,8 @@ end
 
 export type AlignType = "Center" | "Floor"
 Types.AlignType = betterLiteral("Center", "Floor")
+export type SurfaceDetectionMethod = "Raycast" | "Shapecast" | "None"
+Types.SurfaceDetectionMethod = betterLiteral("Raycast", "Shapecast", "None")
 export type PivotMethod =
 	"Pivot"
 	| "Center"
@@ -53,7 +55,7 @@ export type ScaleMethod = "Stretch" | "Fill" | "Fit"
 Types.ScaleMethod = betterLiteral("Stretch", "Fill", "Fit")
 export type PlacementType = "Grid" | "Random" | "Line" -- partially constrained by AlignType
 Types.PlacementType = betterLiteral("Grid", "Random", "Line")
--- Templates may override PauseInterval, GeneratedAlignment/PivotMethod/ScaleMethod/Count, and RandomScale/Roll/Pan/Tilt.
+-- Templates may override PauseInterval, GeneratedAlignment/PivotMethod/SurfaceDetectionMethod/ScaleMethod/Count, and RandomScale/Roll/Pan/Tilt.
 -- Source settings, RandomSeed, tag fields, RandomPlacement, and RandomPadding stay package-controlled.
 export type PackageAttributes = {
 	SourcePath: string, -- where the original template is found, if a folder it will randomly select one of the basePart / model descendants using the seed
@@ -61,6 +63,7 @@ export type PackageAttributes = {
 	SourceMaxYield: number, -- how long to wait for the template to appear (if streaming enabled keep high, if not, do whatever)
 	PauseInterval: number, -- positive integer loop iterations between cooperative pauses
 	GeneratedAlignment: AlignType, -- Center places the selected pivot at the cell center; Floor places it on the bottom of the generation box
+	GeneratedSurfaceDetectionMethod: SurfaceDetectionMethod, -- None preserves placement; casts skip copies without a supporting surface
 	GeneratedPivotMethod: PivotMethod, -- PrimaryPart variants use that part when assigned; otherwise use the matching Pivot/Center/Bottom/Top behavior
 	GeneratedScaleMethod: ScaleMethod, -- Stretch sizes BaseParts to the cell and fits Models; Fit is uniform but never increases past template size (for scale = 1), Fill is fit with increasing; Height matches cell height
 	GeneratedScaleReference: ScaleReference, -- determines what a scale of "1" is for the template

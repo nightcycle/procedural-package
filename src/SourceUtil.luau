@@ -248,6 +248,12 @@ function Util.run(
 		end
 	end
 	do
+		local success, msg = Types.SurfaceDetectionMethod(attributes.GeneratedSurfaceDetectionMethod)
+		if not success then
+			error(`bad GeneratedSurfaceDetectionMethod value: {msg}`)
+		end
+	end
+	do
 		local success, msg = Types.ScaleMethod(attributes.GeneratedScaleMethod)
 		if not success then
 			error(`bad GeneratedScaleMethod value: {msg}`)

@@ -53,6 +53,15 @@ function Util.resolveTemplateAttributes(
 		)
 		resolved.GeneratedAlignment = alignment
 	end
+	local surfaceDetectionMethod: unknown = template:GetAttribute("GeneratedSurfaceDetectionMethod")
+	if surfaceDetectionMethod ~= nil then
+		local success, msg = Types.SurfaceDetectionMethod(surfaceDetectionMethod)
+		assert(
+			success,
+			`template "{template:GetFullName()}" has unknown value for attribute "GeneratedSurfaceDetectionMethod": {msg}`
+		)
+		resolved.GeneratedSurfaceDetectionMethod = surfaceDetectionMethod :: Types.SurfaceDetectionMethod
+	end
 	local pivotMethod: unknown = template:GetAttribute("GeneratedPivotMethod")
 	if pivotMethod ~= nil then
 		local success, msg = Types.PivotMethod(pivotMethod)

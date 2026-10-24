@@ -18,7 +18,8 @@ type TemplateGroup = Types.TemplateGroup
 -- Convert an oriented bounding box into bounds along the generation box's axes.
 function newGenerator(
 	extraDefaultAttributes: ExtraAttributes?,
-	fn: CallbackFn<ExtraAttributes>?
+	fn: CallbackFn<ExtraAttributes>?,
+	model: ProceduralModel?
 ): Types.GeneratorModuleDefinition<Types.PackageAttributes>
 	local defaultAttributes: Types.PackageAttributes = {
 		SourcePath = ENV.DEFAULT_SOURCE_PATH,
@@ -26,6 +27,7 @@ function newGenerator(
 		SourceMaxYield = ENV.DEFAULT_SOURCE_MAX_YIELD,
 		PauseInterval = ENV.DEFAULT_PAUSE_INTERVAL,
 		GeneratedAlignment = ENV.DEFAULT_GENERATED_ALIGNMENT,
+		GeneratedSurfaceDetectionMethod = ENV.DEFAULT_GENERATED_SURFACE_DETECTION_METHOD,
 		GeneratedPivotMethod = ENV.DEFAULT_GENERATED_PIVOT_METHOD,
 		GeneratedScaleMethod = ENV.DEFAULT_GENERATED_SCALE_METHOD,
 		GeneratedScaleReference = ENV.DEFAULT_GENERATED_SCALE_REFERENCE,
@@ -67,7 +69,7 @@ function newGenerator(
 				or parameters.Attributes.RandomPlacement == "Line"
 				or parameters.Attributes.RandomPlacement == "Random"
 			then
-				PlacementUtil.runGrid(parameters, copies, random, targetContainer, fn)
+				PlacementUtil.runGrid(parameters, copies, random, targetContainer, fn, model)
 			else
 				error(`unknown placement method: {parameters.Attributes.RandomPlacement}`)
 			end
@@ -85,15 +87,16 @@ end
 -- Class
 local Module = {}
 
-Module.new = function()
-	return newGenerator()
+Module.new = function(model: ProceduralModel?)
+	return newGenerator(nil, nil, model)
 end
 
 Module.append = function<Attributes>(
 	defaultAttributes: Attributes,
-	fn: CallbackFn<Attributes & Types.PackageAttributes>
+	fn: CallbackFn<Attributes & Types.PackageAttributes>,
+	model: ProceduralModel?
 ): Types.GeneratorModuleDefinition<Attributes & Types.PackageAttributes>
-	return newGenerator(defaultAttributes :: any, fn :: any) :: any
+	return newGenerator(defaultAttributes :: any, fn :: any, model) :: any
 end
 
 return Module
