@@ -1,7 +1,7 @@
 [package]
 name = "nightcycle/procedural-package"
 description = "using procedural models to create local packages"
-version = "0.2.0"
+version = "0.3.0"
 license = "Apache"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
