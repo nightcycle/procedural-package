@@ -26,6 +26,7 @@ function newGenerator(
 		SourceMaxYield = ENV.DEFAULT_SOURCE_MAX_YIELD,
 		PauseInterval = ENV.DEFAULT_PAUSE_INTERVAL,
 		GeneratedAlignment = ENV.DEFAULT_GENERATED_ALIGNMENT,
+		GeneratedPivotMethod = ENV.DEFAULT_GENERATED_PIVOT_METHOD,
 		GeneratedScaleMethod = ENV.DEFAULT_GENERATED_SCALE_METHOD,
 		GeneratedScaleReference = ENV.DEFAULT_GENERATED_SCALE_REFERENCE,
 		GeneratedPadding = ENV.DEFAULT_GENERATED_PADDING,
@@ -37,7 +38,7 @@ function newGenerator(
 		RandomPan = ENV.DEFAULT_RANDOM_PAN,
 		RandomTilt = ENV.DEFAULT_RANDOM_TILT,
 		RandomPlacement = ENV.DEFAULT_RANDOM_PLACEMENT,
-		PackageVersion = 1,
+		PackageVersion = 2,
 	}
 	if extraDefaultAttributes then
 		for k, v in extraDefaultAttributes do

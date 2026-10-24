@@ -28,14 +28,39 @@ function Util.axisAlignedSize(frame: CFrame, size: Vector3): Vector3
 		math.abs(right.Z) * size.X + math.abs(up.Z) * size.Y + math.abs(look.Z) * size.Z
 	)
 end
-function Util.getBounds(instance: Template): (CFrame, Vector3)
-	local frame: CFrame
-	local size: Vector3
+function Util.getExtents(instance: Template): (CFrame, Vector3)
 	if instance:IsA("BasePart") then
-		frame, size = instance.CFrame, instance.Size
+		return instance.CFrame, instance.Size
 	else
-		frame, size = instance:GetBoundingBox()
+		return instance:GetBoundingBox()
 	end
+end
+function Util.getGeneratedPivot(instance: Template, method: Types.PivotMethod): CFrame
+	if method == "Pivot" then
+		return instance:GetPivot()
+	end
+	local frame, size = Util.getExtents(instance)
+	if method == "Bottom" then
+		return frame * CFrame.new(0, -size.Y / 2, 0)
+	elseif method == "Top" then
+		return frame * CFrame.new(0, size.Y / 2, 0)
+	end
+	return frame
+end
+function Util.setPivot(instance: Template, frame: CFrame): ()
+	if instance:IsA("BasePart") then
+		instance.PivotOffset = instance.CFrame:ToObjectSpace(frame)
+	else
+		local primaryPart = instance.PrimaryPart
+		if primaryPart then
+			primaryPart.PivotOffset = primaryPart.CFrame:ToObjectSpace(frame)
+		else
+			instance.WorldPivot = frame
+		end
+	end
+end
+function Util.getBounds(instance: Template): (CFrame, Vector3)
+	local frame, size = Util.getExtents(instance)
 	return frame, Util.axisAlignedSize(frame, size)
 end
 

@@ -28,20 +28,23 @@ end
 
 export type AlignType = "Center" | "Floor"
 Types.AlignType = betterLiteral("Center", "Floor")
+export type PivotMethod = "Pivot" | "Center" | "Bottom" | "Top"
+Types.PivotMethod = betterLiteral("Pivot", "Center", "Bottom", "Top")
 export type ScaleReference = "Height" | "Average" | "Min" | "Max"
 Types.ScaleReference = betterLiteral("Height", "Average", "Min", "Max")
 export type ScaleMethod = "Stretch" | "Fill" | "Fit"
 Types.ScaleMethod = betterLiteral("Stretch", "Fill", "Fit")
 export type PlacementType = "Grid" | "Random" | "Line" -- partially constrained by AlignType
 Types.PlacementType = betterLiteral("Grid", "Random", "Line")
--- Templates may override PauseInterval, GeneratedAlignment/Scale/Count, and RandomScale/Roll/Pan/Tilt.
+-- Templates may override PauseInterval, GeneratedAlignment/PivotMethod/ScaleMethod/Count, and RandomScale/Roll/Pan/Tilt.
 -- Source settings, RandomSeed, tag fields, RandomPlacement, and RandomPadding stay package-controlled.
 export type PackageAttributes = {
 	SourcePath: string, -- where the original template is found, if a folder it will randomly select one of the basePart / model descendants using the seed
 	SourcePathDelimiter: string, -- in case you want to use "/" instead of "." for the path
 	SourceMaxYield: number, -- how long to wait for the template to appear (if streaming enabled keep high, if not, do whatever)
 	PauseInterval: number, -- positive integer loop iterations between cooperative pauses
-	GeneratedAlignment: AlignType, -- Center aligns within a cell; Floor rests on the bottom of the generation box
+	GeneratedAlignment: AlignType, -- Center places the selected pivot at the cell center; Floor places it on the bottom of the generation box
+	GeneratedPivotMethod: PivotMethod, -- Pivot uses the native pivot; Center/Bottom/Top use the extents center or its local Y faces
 	GeneratedScaleMethod: ScaleMethod, -- Stretch sizes BaseParts to the cell and fits Models; Fit is uniform but never increases past template size (for scale = 1), Fill is fit with increasing; Height matches cell height
 	GeneratedScaleReference: ScaleReference, -- determines what a scale of "1" is for the template
 	GeneratedPadding: UDim, -- minimum separation between instances; a single seeded gap is sampled per generation

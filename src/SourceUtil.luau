@@ -151,22 +151,18 @@ function Util.prepareClone(
 	scaleMethod: Types.ScaleMethod,
 	scaleRef: Types.ScaleReference,
 	randomScale: number,
-	padding: UDim
+	padding: UDim,
+	pivotMethod: Types.PivotMethod
 ): Template
 	assert(template.Archivable, `template "{template:GetFullName()}" must be Archivable`)
 	local instance = template:Clone()
-	local pivotOffset = template:GetAttribute("PivotOffset")
-	if typeof(pivotOffset) == "CFrame" then
-		if instance:IsA("BasePart") then
-			instance.PivotOffset = pivotOffset
-		elseif instance.PrimaryPart then
-			local primaryPart = instance.PrimaryPart
-			primaryPart.PivotOffset = primaryPart.CFrame:ToObjectSpace(instance:GetPivot() * pivotOffset)
-		else
-			instance.WorldPivot = instance:GetPivot() * pivotOffset
-		end
+	if pivotMethod ~= "Pivot" then
+		GeometryUtil.setPivot(instance, GeometryUtil.getGeneratedPivot(instance, pivotMethod))
 	end
+	-- Measure in the generated orientation, including any native pivot rotation.
+	instance:PivotTo(rotation)
 	size -= padding.Offset * Vector3.one * 2
+	local uniformScale = randomScale
 	if instance:IsA("BasePart") and scaleMethod == "Stretch" then
 		local rescale = size / instance.Size
 		local baseOffset = instance.PivotOffset
@@ -174,12 +170,12 @@ function Util.prepareClone(
 		instance.PivotOffset =
 			CFrame.fromMatrix(baseOffset.Position * rescale, baseOffset.XVector, baseOffset.YVector, baseOffset.ZVector)
 	else
-		local _, sourceSize = GeometryUtil.getBounds(instance)
+		local sourceFrame, sourceSize = GeometryUtil.getBounds(instance)
 		local sizeOverride = template:GetAttribute("Size")
 		if typeof(sizeOverride) == "Vector3" then
 			-- Model overrides describe dimensions at scale 1, as in the original generator.
 			local templateScale = if instance:IsA("Model") then instance:GetScale() else 1
-			sourceSize = GeometryUtil.axisAlignedSize(rotation, sizeOverride * templateScale)
+			sourceSize = GeometryUtil.axisAlignedSize(sourceFrame, sizeOverride * templateScale)
 		end
 		assert(
 			sourceSize.X > 0 and sourceSize.Y > 0 and sourceSize.Z > 0,
@@ -201,11 +197,12 @@ function Util.prepareClone(
 		if scaleMethod == "Fit" then
 			scale = math.min(scale, 1)
 		end
-		scale *= (1 - padding.Scale * 2)
-		GeometryUtil.scaleInstance(instance, scale)
+		uniformScale *= scale * (1 - padding.Scale * 2)
 	end
-	if randomScale ~= 1 then
-		GeometryUtil.scaleInstance(instance, randomScale)
+	-- Apply the combined multiplier once so a minimum Model scale clamp does not
+	-- distort the result when RandomScale follows the fitting scale.
+	if uniformScale ~= 1 then
+		GeometryUtil.scaleInstance(instance, uniformScale)
 	end
 	instance:PivotTo(rotation)
 	return instance
@@ -242,6 +239,12 @@ function Util.run(
 		local success, msg = Types.AlignType(attributes.GeneratedAlignment)
 		if not success then
 			error(`bad GeneratedAlignment value: {msg}`)
+		end
+	end
+	do
+		local success, msg = Types.PivotMethod(attributes.GeneratedPivotMethod)
+		if not success then
+			error(`bad GeneratedPivotMethod value: {msg}`)
 		end
 	end
 	do

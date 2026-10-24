@@ -40,7 +40,8 @@ function solveInstance(copy: TemplateGroup, size: Vector3, random: Random, paddi
 		copy.Parameters.Attributes.GeneratedScaleMethod,
 		copy.Parameters.Attributes.GeneratedScaleReference,
 		randomScale,
-		padding
+		padding,
+		copy.Parameters.Attributes.GeneratedPivotMethod
 	)
 end
 function getGridDimensions(size: Vector3, count: number, parameters: Parameters): Vector3
@@ -124,9 +125,12 @@ function Util.runGrid(
 			center -= Vector3.new(0, outerCellSize.Y / 2, 0)
 			outerCellCenter -= Vector3.new(0, outerCellSize.Y / 2, 0)
 		end
-		instance:PivotTo(
-			CFrame.fromMatrix(center, innerCellCenter.XVector, innerCellCenter.YVector, innerCellCenter.ZVector)
-		)
+		local origin = CFrame.new(center) * instance:GetPivot().Rotation
+		local pivotOffset = copy.Template:GetAttribute("PivotOffset")
+		if typeof(pivotOffset) == "CFrame" then
+			origin *= pivotOffset
+		end
+		instance:PivotTo(origin)
 		if fn then
 			fn(instance, parameters, targetContainer)
 		end

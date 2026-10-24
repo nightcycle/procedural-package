@@ -53,6 +53,14 @@ function Util.resolveTemplateAttributes(
 		)
 		resolved.GeneratedAlignment = alignment
 	end
+	local pivotMethod: unknown = template:GetAttribute("GeneratedPivotMethod")
+	if pivotMethod ~= nil then
+		assert(
+			pivotMethod == "Pivot" or pivotMethod == "Center" or pivotMethod == "Bottom" or pivotMethod == "Top",
+			`template "{template:GetFullName()}" attribute GeneratedPivotMethod must be Pivot, Center, Bottom, or Top`
+		)
+		resolved.GeneratedPivotMethod = pivotMethod
+	end
 	local scaleType: unknown = template:GetAttribute("GeneratedScaleMethod")
 	if scaleType ~= nil then
 		local success, msg = Types.ScaleMethod(scaleType)
@@ -80,7 +88,9 @@ function Util.resolveTemplateAttributes(
 			resolved[k] = tempV
 		end
 	end
-	resolved.GeneratedScaleMethod = if resolved.RandomPlacement == "Random" then "Fit" else resolved.GeneratedScaleMethod
+	resolved.GeneratedScaleMethod = if resolved.RandomPlacement == "Random"
+		then "Fit"
+		else resolved.GeneratedScaleMethod
 	return resolved
 end
 
