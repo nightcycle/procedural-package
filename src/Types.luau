@@ -28,8 +28,25 @@ end
 
 export type AlignType = "Center" | "Floor"
 Types.AlignType = betterLiteral("Center", "Floor")
-export type PivotMethod = "Pivot" | "Center" | "Bottom" | "Top"
-Types.PivotMethod = betterLiteral("Pivot", "Center", "Bottom", "Top")
+export type PivotMethod =
+	"Pivot"
+	| "Center"
+	| "Bottom"
+	| "Top"
+	| "PrimaryPartPivot"
+	| "PrimaryPartCenter"
+	| "PrimaryPartBottom"
+	| "PrimaryPartTop"
+Types.PivotMethod = betterLiteral(
+	"Pivot",
+	"Center",
+	"Bottom",
+	"Top",
+	"PrimaryPartPivot",
+	"PrimaryPartCenter",
+	"PrimaryPartBottom",
+	"PrimaryPartTop"
+)
 export type ScaleReference = "Height" | "Average" | "Min" | "Max"
 Types.ScaleReference = betterLiteral("Height", "Average", "Min", "Max")
 export type ScaleMethod = "Stretch" | "Fill" | "Fit"
@@ -44,7 +61,7 @@ export type PackageAttributes = {
 	SourceMaxYield: number, -- how long to wait for the template to appear (if streaming enabled keep high, if not, do whatever)
 	PauseInterval: number, -- positive integer loop iterations between cooperative pauses
 	GeneratedAlignment: AlignType, -- Center places the selected pivot at the cell center; Floor places it on the bottom of the generation box
-	GeneratedPivotMethod: PivotMethod, -- Pivot uses the native pivot; Center/Bottom/Top use the extents center or its local Y faces
+	GeneratedPivotMethod: PivotMethod, -- PrimaryPart variants use that part when assigned; otherwise use the matching Pivot/Center/Bottom/Top behavior
 	GeneratedScaleMethod: ScaleMethod, -- Stretch sizes BaseParts to the cell and fits Models; Fit is uniform but never increases past template size (for scale = 1), Fill is fit with increasing; Height matches cell height
 	GeneratedScaleReference: ScaleReference, -- determines what a scale of "1" is for the template
 	GeneratedPadding: UDim, -- minimum separation between instances; a single seeded gap is sampled per generation

@@ -36,6 +36,12 @@ In order to connect to a template you must use the "SourcePath" attribute, or wh
 | `"Center"` | The Model's bounding box center, or the BasePart's CFrame. |
 | `"Bottom"` | The extents center minus half its height along its local Y axis. |
 | `"Top"` | The extents center plus half its height along its local Y axis. |
+| `"PrimaryPartPivot"` | The assigned PrimaryPart's native pivot; falls back to `"Pivot"`. |
+| `"PrimaryPartCenter"` | The assigned PrimaryPart's CFrame; falls back to `"Center"`. |
+| `"PrimaryPartBottom"` | The assigned PrimaryPart's center minus half its height along its local Y axis; falls back to `"Bottom"`. |
+| `"PrimaryPartTop"` | The assigned PrimaryPart's center plus half its height along its local Y axis; falls back to `"Top"`. |
+
+The PrimaryPart variants fall back to the corresponding default behavior for Models without a PrimaryPart and for BaseParts. They still scale and place the entire generated copy.
 
 `GeneratedAlignment = "Center"` places that origin at the cell center; `"Floor"` places it on the generation box floor. Use `"Bottom"` with `"Floor"` to place upright copies on the floor without editing source pivots. Scaling is relative to the source's current dimensions and Model scale, including `RandomScale`.
 

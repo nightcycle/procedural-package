@@ -55,11 +55,12 @@ function Util.resolveTemplateAttributes(
 	end
 	local pivotMethod: unknown = template:GetAttribute("GeneratedPivotMethod")
 	if pivotMethod ~= nil then
+		local success, msg = Types.PivotMethod(pivotMethod)
 		assert(
-			pivotMethod == "Pivot" or pivotMethod == "Center" or pivotMethod == "Bottom" or pivotMethod == "Top",
-			`template "{template:GetFullName()}" attribute GeneratedPivotMethod must be Pivot, Center, Bottom, or Top`
+			success,
+			`template "{template:GetFullName()}" has unknown value for attribute "GeneratedPivotMethod": {msg}`
 		)
-		resolved.GeneratedPivotMethod = pivotMethod
+		resolved.GeneratedPivotMethod = pivotMethod :: Types.PivotMethod
 	end
 	local scaleType: unknown = template:GetAttribute("GeneratedScaleMethod")
 	if scaleType ~= nil then

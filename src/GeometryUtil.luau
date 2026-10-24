@@ -36,6 +36,18 @@ function Util.getExtents(instance: Template): (CFrame, Vector3)
 	end
 end
 function Util.getGeneratedPivot(instance: Template, method: Types.PivotMethod): CFrame
+	local primaryMethod: Types.PivotMethod? = if method == "PrimaryPartPivot"
+		then "Pivot"
+		elseif method == "PrimaryPartCenter" then "Center"
+		elseif method == "PrimaryPartBottom" then "Bottom"
+		elseif method == "PrimaryPartTop" then "Top"
+		else nil
+	if primaryMethod then
+		if instance:IsA("Model") then
+			instance = instance.PrimaryPart or instance
+		end
+		method = primaryMethod
+	end
 	if method == "Pivot" then
 		return instance:GetPivot()
 	end
