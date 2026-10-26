@@ -1,0 +1,159 @@
+--!strict
+local ENV = require(script.Parent.ENV)
+local Types = require(script.Parent.Types)
+local Schema = require(script.Parent.ParameterSchema)
+local Layouts = require(script.Parent.Layouts)
+local field = Schema.field
+
+local function isString(value: unknown): boolean
+	return typeof(value) == "string"
+end
+local common: Types.ParameterSchema = {
+	Source_Path = field(function()
+		return ENV.DEFAULT_SOURCE_PATH
+	end, isString),
+	Source_PathDelimiter = field(function()
+		return ENV.DEFAULT_SOURCE_PATH_DELIMITER
+	end, function(value)
+		return typeof(value) == "string" and value ~= ""
+	end),
+	Source_MaxYield = field(function()
+		return ENV.DEFAULT_SOURCE_MAX_YIELD
+	end, Schema.nonNegative),
+	Source_PivotMethod = field(function()
+		return ENV.DEFAULT_SOURCE_PIVOT_METHOD
+	end, Types.PivotMethod, true),
+	Source_ScaleMethod = field(function()
+		return ENV.DEFAULT_SOURCE_SCALE_METHOD
+	end, Types.ScaleMethod, true),
+	Source_ScaleReference = field(function()
+		return ENV.DEFAULT_SOURCE_SCALE_REFERENCE
+	end, Types.ScaleReference, true),
+	Source_Padding = field(function()
+		return ENV.DEFAULT_SOURCE_PADDING
+	end, function(value)
+		return typeof(value) == "UDim"
+			and Schema.nonNegative(value.Scale)
+			and value.Scale < 0.5
+			and Schema.nonNegative(value.Offset)
+	end),
+	Source_Alignment = field(function()
+		return ENV.DEFAULT_SOURCE_ALIGNMENT
+	end, Types.AlignType, true),
+	Source_ExcludedTags = field(function()
+		return ENV.DEFAULT_SOURCE_EXCLUDED_TAGS
+	end, isString),
+	Random_Seed = field(function()
+		return ENV.DEFAULT_RANDOM_SEED
+	end, Schema.finite),
+	Random_Scale = field(function()
+		return ENV.DEFAULT_RANDOM_SCALE
+	end, Schema.scaleRange, true),
+	Random_Roll = field(function()
+		return ENV.DEFAULT_RANDOM_ROLL
+	end, Schema.range, true),
+	Random_Pan = field(function()
+		return ENV.DEFAULT_RANDOM_PAN
+	end, Schema.range, true),
+	Random_Tilt = field(function()
+		return ENV.DEFAULT_RANDOM_TILT
+	end, Schema.range, true),
+	Layout_PauseInterval = field(function()
+		return ENV.DEFAULT_LAYOUT_PAUSE_INTERVAL
+	end, Schema.positiveInteger),
+	Layout_Type = field(function()
+		return ENV.DEFAULT_LAYOUT_TYPE
+	end, Types.LayoutType),
+}
+local all = table.clone(common)
+for _, layout in Layouts do
+	for name, definition in layout.Parameters do
+		assert(all[name] == nil or all[name] == definition, `conflicting parameter definition: {name}`)
+		all[name] = definition
+	end
+end
+
+local Util = {}
+
+local function validate(schema: Types.ParameterSchema, attributes: Types.ExtraAttributes, context: string)
+	for name, definition in schema do
+		assert(definition.Validate(attributes[name]), `{context}: invalid {name} ({attributes[name]})`)
+	end
+end
+
+function Util.getDefaults(extraAttributes: Types.ExtraAttributes?): Types.PackageAttributes & Types.ExtraAttributes
+	local defaults: Types.ExtraAttributes = {}
+	for name, definition in all do
+		defaults[name] = definition.Default()
+	end
+	if extraAttributes then
+		for name, value in extraAttributes do
+			assert(all[name] == nil, `custom attribute {name} is reserved by the package`)
+			defaults[name] = value
+		end
+	end
+	-- The schema is the single runtime boundary for attribute dictionaries.
+	return defaults :: any
+end
+
+function Util.validate(parameters: Types.Parameters): Types.Layout
+	validate(common, parameters.Attributes, "generator")
+	local size = parameters.Size
+	assert(
+		Schema.vector(size) and size.X > 0 and size.Y > 0 and size.Z > 0,
+		"generation Size must contain finite positive dimensions"
+	)
+	local layout = Layouts[parameters.Attributes.Layout_Type]
+	validate(layout.Parameters, parameters.Attributes, parameters.Attributes.Layout_Type)
+	return layout
+end
+
+function Util.parseTags(value: string): { string }
+	local tags: { string } = {}
+	for _, entry in string.split(value, ",") do
+		local tag = string.match(entry, "^%s*(.-)%s*$")
+		if tag and tag ~= "" then
+			table.insert(tags, tag)
+		end
+	end
+	return tags
+end
+
+function Util.resolveTemplateAttributes(
+	template: Types.Template,
+	parameters: Types.Parameters,
+	extraDefaults: Types.ExtraAttributes?
+): Types.Parameters
+	local resolved = table.clone(parameters.Attributes)
+	for name, definition in common do
+		if not definition.TemplateOverride then
+			continue
+		end
+		local value: unknown = template:GetAttribute(name)
+		if value ~= nil then
+			assert(definition.Validate(value), `template "{template:GetFullName()}": invalid {name} ({value})`)
+			resolved[name] = value
+		end
+	end
+	if extraDefaults then
+		for name, defaultValue in extraDefaults do
+			local value: unknown = template:GetAttribute(name)
+			if value ~= nil then
+				assert(
+					typeof(value) == typeof(defaultValue),
+					`template "{template:GetFullName()}": invalid custom attribute {name}`
+				)
+				resolved[name] = value
+			end
+		end
+	end
+	return {
+		Attributes = resolved,
+		Size = parameters.Size,
+		Pause = function(_self: Types.Parameters)
+			parameters:Pause()
+		end,
+	}
+end
+
+return Util

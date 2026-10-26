@@ -1,102 +1,66 @@
 --!strict
--- Packages
--- Modules
 local ENV = require(script.Parent.ENV)
+local Types = require(script.Parent.Types)
+local ParameterUtil = require(script.Parent.ParameterUtil)
 local SourceUtil = require(script.Parent.SourceUtil)
 local PlacementUtil = require(script.Parent.PlacementUtil)
+local GeometryUtil = require(script.Parent.GeometryUtil)
 local DebugUtil = require(script.Parent.DebugUtil)
--- Types
-local Types = require(script.Parent.Types)
-type ExtraAttributes = Types.ExtraAttributes
-type Template = Types.Template
-type Bounds = Types.Bounds
-type CallbackFn<V> = Types.CallbackFn<V>
-type Parameters = Types.Parameters
-type TemplateGroup = Types.TemplateGroup
--- Constants
--- Private Functions
--- Convert an oriented bounding box into bounds along the generation box's axes.
-function newGenerator(
-	extraDefaultAttributes: ExtraAttributes?,
-	fn: CallbackFn<ExtraAttributes>?,
+
+local function newGenerator(
+	extraDefaults: Types.ExtraAttributes?,
+	callback: Types.CallbackFn<Types.PackageAttributes & Types.ExtraAttributes>?,
 	model: ProceduralModel?
-): Types.GeneratorModuleDefinition<Types.PackageAttributes>
-	local defaultAttributes: Types.PackageAttributes = {
-		SourcePath = ENV.DEFAULT_SOURCE_PATH,
-		SourcePathDelimiter = ENV.DEFAULT_SOURCE_PATH_DELIMITER,
-		SourceMaxYield = ENV.DEFAULT_SOURCE_MAX_YIELD,
-		PauseInterval = ENV.DEFAULT_PAUSE_INTERVAL,
-		GeneratedAlignment = ENV.DEFAULT_GENERATED_ALIGNMENT,
-		GeneratedSurfaceDetectionMethod = ENV.DEFAULT_GENERATED_SURFACE_DETECTION_METHOD,
-		GeneratedPivotMethod = ENV.DEFAULT_GENERATED_PIVOT_METHOD,
-		GeneratedScaleMethod = ENV.DEFAULT_GENERATED_SCALE_METHOD,
-		GeneratedScaleReference = ENV.DEFAULT_GENERATED_SCALE_REFERENCE,
-		GeneratedPadding = ENV.DEFAULT_GENERATED_PADDING,
-		GeneratedExcludedTags = ENV.DEFAULT_GENERATED_EXCLUDED_TAGS,
-		GeneratedCount = ENV.DEFAULT_GENERATED_COUNT,
-		RandomSeed = ENV.DEFAULT_RANDOM_SEED,
-		RandomScale = ENV.DEFAULT_RANDOM_SCALE,
-		RandomRoll = ENV.DEFAULT_RANDOM_ROLL,
-		RandomPan = ENV.DEFAULT_RANDOM_PAN,
-		RandomTilt = ENV.DEFAULT_RANDOM_TILT,
-		RandomPlacement = ENV.DEFAULT_RANDOM_PLACEMENT,
-		PackageVersion = 2,
-	}
-	if extraDefaultAttributes then
-		for k, v in extraDefaultAttributes do
-			if defaultAttributes[k] == nil then
-				defaultAttributes[k] = v
-			end
-		end
-	end
+): Types.GeneratorModuleDefinition<Types.PackageAttributes & Types.ExtraAttributes>
 	return {
-		Attributes = defaultAttributes,
-		OnGenerate = function(inputParameters: Parameters, targetContainer: GeneratedFolder): ()
-			DebugUtil.print("generating")
-
-			if inputParameters.Attributes.SourcePath == "" then
-				warn(`no SourcePath set`)
+		Attributes = ParameterUtil.getDefaults(extraDefaults),
+		OnGenerate = function(parameters: Types.Parameters, target: GeneratedFolder)
+			local layout = ParameterUtil.validate(parameters)
+			if parameters.Attributes.Source_Path == "" then
+				warn("no Source_Path set")
 				return
 			end
-			local random = Random.new(inputParameters.Attributes.RandomSeed)
-			local copies, parameters = SourceUtil.run(random, inputParameters, extraDefaultAttributes)
-			local count = #copies
-			if count == 0 then
-				return
+			local random = Random.new(parameters.Attributes.Random_Seed)
+			local templates = SourceUtil.run(parameters)
+			-- Use the largest source footprint so mixed folders have stable, conservative grid spacing.
+			local templateSize = Vector3.zero
+			for index, template in templates do
+				local _, size = GeometryUtil.getBounds(template)
+				templateSize = templateSize:Max(size)
+				if index % parameters.Attributes.Layout_PauseInterval == 0 then
+					parameters:Pause()
+				end
 			end
-			if
-				parameters.Attributes.RandomPlacement == "Grid"
-				or parameters.Attributes.RandomPlacement == "Line"
-				or parameters.Attributes.RandomPlacement == "Random"
-			then
-				PlacementUtil.runGrid(parameters, copies, random, targetContainer, fn, model)
-			else
-				error(`unknown placement method: {parameters.Attributes.RandomPlacement}`)
-			end
-
+			assert(
+				templateSize.X > 0 and templateSize.Y > 0 and templateSize.Z > 0,
+				"sources must have positive dimensions"
+			)
+			local cells = layout.GetCells(parameters, templateSize, random)
+			local copies = SourceUtil.getCopies(templates, #cells, parameters, random, extraDefaults)
+			PlacementUtil.run(parameters, copies, cells, random, target, callback, model)
 			if ENV.DEBUG_AREA_ENABLED then
-				local part, box = DebugUtil.debugRegion(CFrame.new(0, 0, 0), parameters.Size, Color3.new(1, 1, 0))
+				local part, box = DebugUtil.debugRegion(CFrame.identity, parameters.Size, Color3.new(1, 1, 0))
 				box.LineThickness *= 2
-				part.Name = `Area`
-				part.Parent = targetContainer
+				part.Name = "Area"
+				part.Parent = target
 			end
 		end,
 	}
 end
 
--- Class
-local Module = {}
+local Generator = {}
 
-Module.new = function(model: ProceduralModel?)
+function Generator.new(model: ProceduralModel?): Types.GeneratorModuleDefinition<Types.PackageAttributes>
 	return newGenerator(nil, nil, model)
 end
 
-Module.append = function<Attributes>(
-	defaultAttributes: Attributes,
-	fn: CallbackFn<Attributes & Types.PackageAttributes>,
+function Generator.append<Attributes>(
+	defaults: Attributes,
+	callback: Types.CallbackFn<Attributes & Types.PackageAttributes>,
 	model: ProceduralModel?
 ): Types.GeneratorModuleDefinition<Attributes & Types.PackageAttributes>
-	return newGenerator(defaultAttributes :: any, fn :: any, model) :: any
+	-- Generic custom attributes are checked by ParameterUtil at the engine attribute boundary.
+	return newGenerator(defaults :: any, callback :: any, model) :: any
 end
 
-return Module
+return Generator

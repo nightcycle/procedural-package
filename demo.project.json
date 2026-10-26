@@ -20,6 +20,12 @@
 		},
 		"ReplicatedStorage": {
 			"$className": "ReplicatedStorage",
+			"DevPackages": {
+				"$path": "DevPackages"
+			},
+			"DebugStories": {
+				"$path": "stories"
+			},
 			"Packages": {
 				"$path": "Packages",
 				"ProceduralPackage": {

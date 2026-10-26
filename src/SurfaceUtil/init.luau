@@ -6,6 +6,7 @@ local Types = require(script.Parent.Types)
 local Util = {}
 
 -- Output remains in generation space; only the queries use world coordinates.
+-- Optional query context supports isolated WorldModels without mutating ENV.
 function Util.detect(
 	instance: Types.Template,
 	origin: CFrame,
@@ -13,20 +14,24 @@ function Util.detect(
 	cellCenter: Vector3,
 	cellSize: Vector3,
 	fullSize: Vector3,
-	model: ProceduralModel?
+	model: ProceduralModel?,
+	queryRoot: WorldRoot?,
+	queryParams: RaycastParams?
 ): CFrame?
-	local method = attributes.GeneratedSurfaceDetectionMethod
+	local method = attributes.Layout_SurfaceDetectionMethod
 	if method == "None" then
 		return origin
 	end
 	assert(model, "Surface detection requires the ProceduralModel passed to Generator.new or Generator.append")
 	local frame, scale = model:GetPivot(), model:GetScale()
-	local height = if attributes.GeneratedAlignment == "Floor" then fullSize.Y else cellSize.Y
-	local top = if attributes.GeneratedAlignment == "Floor" then fullSize.Y / 2 else cellCenter.Y + cellSize.Y / 2
+	local world = queryRoot or workspace
+	local params = queryParams or ENV.RAYCAST_PARAMS
+	local height = if attributes.Source_Alignment == "Floor" then fullSize.Y else cellSize.Y
+	local top = if attributes.Source_Alignment == "Floor" then fullSize.Y / 2 else cellCenter.Y + cellSize.Y / 2
 	local direction = frame:VectorToWorldSpace(Vector3.new(0, -(height + ENV.SMALL * 2) * scale, 0))
 	if method == "Raycast" then
 		local start = Vector3.new(origin.X, top + ENV.SMALL, origin.Z)
-		local result = workspace:Raycast(frame:PointToWorldSpace(start * scale), direction, ENV.RAYCAST_PARAMS)
+		local result = world:Raycast(frame:PointToWorldSpace(start * scale), direction, params)
 		if not result then
 			return nil
 		end
@@ -42,7 +47,7 @@ function Util.detect(
 	local function cast(part: BasePart)
 		local localFrame = part.CFrame + lift
 		local worldFrame = frame * (CFrame.new(localFrame.Position * scale) * localFrame.Rotation)
-		local result = workspace:Shapecast(part, direction, ENV.RAYCAST_PARAMS, worldFrame, part.Size * scale)
+		local result = world:Shapecast(part, direction, params, worldFrame, part.Size * scale)
 		if result and (distance == nil or result.Distance < distance) then
 			distance = result.Distance
 		end
