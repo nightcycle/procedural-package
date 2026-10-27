@@ -29,14 +29,6 @@ local common: Types.ParameterSchema = {
 	Source_ScaleReference = field(function()
 		return ENV.DEFAULT_SOURCE_SCALE_REFERENCE
 	end, Types.ScaleReference, true),
-	Source_Padding = field(function()
-		return ENV.DEFAULT_SOURCE_PADDING
-	end, function(value)
-		return typeof(value) == "UDim"
-			and Schema.nonNegative(value.Scale)
-			and value.Scale < 0.5
-			and Schema.nonNegative(value.Offset)
-	end),
 	Source_Alignment = field(function()
 		return ENV.DEFAULT_SOURCE_ALIGNMENT
 	end, Types.AlignType, true),

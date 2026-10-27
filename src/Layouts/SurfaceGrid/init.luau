@@ -6,6 +6,7 @@ local Util = require(script.Parent.Util)
 
 local Layout: Types.Layout = {
 	Parameters = {
+		Source_Padding = Util.Padding,
 		Layout_SurfaceDetectionMethod = Util.SurfaceDetection,
 		Layout_ColumnLimit = Schema.field(function()
 			return ENV.DEFAULT_LAYOUT_COLUMN_LIMIT

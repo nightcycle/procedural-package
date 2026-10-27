@@ -132,9 +132,9 @@ function Util.prepareForLayout(template: Template, parameters: Parameters, rando
 		attributes.Source_ScaleMethod,
 		attributes.Source_ScaleReference,
 		randomScale,
-		attributes.Source_Padding,
+		if attributes.Layout_Type == "Single" then UDim.new(0) else attributes.Source_Padding,
 		attributes.Source_PivotMethod,
-		if attributes.Layout_Type == "Single" then Vector3.one else Vector3.new(1, 0, 1)
+		Vector3.new(1, 0, 1)
 	)
 end
 

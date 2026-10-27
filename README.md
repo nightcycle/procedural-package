@@ -16,7 +16,7 @@ return Package.Generator.new(model)
 
 Set `Source_Path` to the full path of a BasePart, Model, or Folder. Folders select seeded random templates from eligible descendants. Models are treated as whole templates; their children are not independently selected. `Source_ExcludedTags` skips matching descendants and their subtrees. Commas separate tags.
 
-Only the selected layout's attributes appear on the ProceduralModel. Changing `Layout_Type` removes unrelated fields with `SetAttribute(name, nil)` and adds the new layout's fields. Previously edited layout values are cached for that model during the current generator session and restored when you switch back. Source, random, pause, and custom attributes are preserved.
+Only the selected layout's attributes appear on the ProceduralModel. Changing `Layout_Type` removes unrelated fields with `SetAttribute(name, nil)` and adds the new layout's fields. Previously edited layout values are cached for that model during the current generator session and restored when you switch back. `Source_Padding` belongs only to surface layouts; Single uses the full area without padding. Other source, random, pause, and custom attributes are preserved.
 
 Pass the owning model to `Generator.new(model)` or `Generator.append(defaults, callback, model)` to keep the Properties panel synchronized. The constructor manages attribute changes outside `OnGenerate`; its optional `Destroy()` cleanup disconnects the binding, and destroying the model also disconnects it. Generators constructed without an owner still resolve missing layout fields internally but cannot edit a model's displayed attributes.
 
@@ -59,7 +59,7 @@ Copies sample approximately equal arc distances along the reference curve, then 
 | `Source_PivotMethod` | `"Pivot"` | Origin used for scaling, rotation, and placement. |
 | `Source_ScaleMethod` | `"Stretch"` | Stretch BaseParts to the generation area, uniformly Fill, or Fit without increasing source size. Models always scale uniformly. |
 | `Source_ScaleReference` | `"Min"` | Uniform fitting reference: `Height`, `Average`, `Min`, or `Max`. |
-| `Source_Padding` | `UDim.new(0.1, 0)` | Insets the area before fitting and reserves space around grid footprints. Surface layouts pad only X/Z; Single pads all axes. Scale must be in [0, 0.5), Offset nonnegative. |
+| `Source_Padding` | `UDim.new(0.1, 0)` | Surface layouts only: insets X/Z before fitting and reserves space around grid footprints. Removed and ignored by Single. Scale must be in [0, 0.5), Offset nonnegative. |
 | `Source_Alignment` | `"Floor"` | Place the selected origin on the area's floor, or use `"Center"` for the cell center. |
 | `Source_ExcludedTags` | `""` | Comma-separated tags excluded during folder selection. |
 | `Random_Seed` | `0` | Reproducible generation seed. |

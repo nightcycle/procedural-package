@@ -80,6 +80,7 @@ end
 local Layout: Types.Layout & { GetControlPoints: typeof(getControlPoints) } = {
 	GetControlPoints = getControlPoints,
 	Parameters = {
+		Source_Padding = Util.Padding,
 		Layout_SurfaceDetectionMethod = Util.SurfaceDetection,
 		Layout_PopulationLimit = Util.Population,
 		Layout_CurveSize0 = Schema.field(function()

@@ -4,6 +4,14 @@ local Schema = require(script.Parent.Parent.ParameterSchema)
 local Types = require(script.Parent.Parent.Types)
 local Util = {}
 
+Util.Padding = Schema.field(function()
+	return ENV.DEFAULT_SOURCE_PADDING
+end, function(value)
+	return typeof(value) == "UDim"
+		and Schema.nonNegative(value.Scale)
+		and value.Scale < 0.5
+		and Schema.nonNegative(value.Offset)
+end)
 Util.SurfaceDetection = Schema.field(function()
 	return ENV.DEFAULT_LAYOUT_SURFACE_DETECTION_METHOD
 end, Types.SurfaceDetectionMethod)

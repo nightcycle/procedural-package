@@ -57,7 +57,6 @@ export type BaseSourceAttributes = {
 	Source_PivotMethod: PivotMethod,
 	Source_ScaleMethod: ScaleMethod,
 	Source_ScaleReference: ScaleReference,
-	Source_Padding: UDim,
 	Source_Alignment: AlignType,
 	Source_ExcludedTags: string,
 }
@@ -74,6 +73,7 @@ export type BaseLayoutAttributes = {
 }
 export type SingleLayoutAttributes = BaseLayoutAttributes
 export type BaseSurfaceLayoutAttributes = BaseLayoutAttributes & {
+	Source_Padding: UDim,
 	Layout_SurfaceDetectionMethod: SurfaceDetectionMethod,
 }
 export type SurfaceGridLayoutAttributes = BaseSurfaceLayoutAttributes & {
@@ -89,6 +89,7 @@ export type SurfaceCurvedLineLayoutAttributes = SurfaceRandomLayoutAttributes & 
 }
 -- Public model attributes contain only the fields owned by the selected layout.
 export type PackageAttributes = BaseSourceAttributes & BaseRandomAttributes & BaseLayoutAttributes & {
+	Source_Padding: UDim?,
 	Layout_SurfaceDetectionMethod: SurfaceDetectionMethod?,
 	Layout_ColumnLimit: NumberRange?,
 	Layout_RowLimit: NumberRange?,

@@ -216,8 +216,6 @@ local function fit(method: string, reference: string, size: Vector3, padding: UD
 end
 local surfaceHeight = fit("Fill", "Height", Vector3.new(20, 12, 20), UDim.new(0.2, 1), surfaceAxes)
 assert((surfaceHeight.Size - Vector3.new(8, 12, 8)).Magnitude < 0.001, "surface padding must not reduce Height fitting")
-local singleHeight = fit("Fill", "Height", Vector3.new(20, 12, 20), UDim.new(0.2, 1), nil)
-assert((singleHeight.Size - Vector3.new(4, 6, 4)).Magnitude < 0.001, "Single should pad its height as well")
 local stretched = fit("Stretch", "Min", Vector3.new(20, 2, 16), UDim.new(0.1, 3), surfaceAxes)
 assert((stretched.Size - Vector3.new(11.2, 2, 8)).Magnitude < 0.001, "Stretch should pad X/Z without exhausting height")
 local fitted = fit("Fit", "Min", padded[1].Size, UDim.new(0.1, 2), surfaceAxes)
@@ -235,8 +233,27 @@ for _, kind in { "Single", "SurfaceGrid", "SurfaceRandom", "SurfaceCurvedLine" }
 	local target = roblox.Instance.new("Folder")
 	definition.OnGenerate(scoped, target)
 	local copy = target:GetChildren()[1] :: RInstance
-	local expectedHeight = if kind == "Single" then 17.6 else 24
-	assert(math.abs(copy.Size.Y - expectedHeight) < 0.001, `wrong padding axes in {kind} placement`)
+	assert(math.abs(copy.Size.Y - 24) < 0.001, `padding must not reduce height in {kind} placement`)
+	target:Destroy()
+end
+
+-- Single ignores stale padding for every fitting method, including invalid old values.
+for _, method in { "Fill", "Fit", "Stretch" } do
+	local scoped = table.clone(parameters)
+	scoped.Attributes = table.clone(attributes)
+	scoped.Attributes.Layout_Type = "Single"
+	scoped.Attributes.Source_ScaleMethod = method
+	scoped.Attributes.Source_ScaleReference = "Min"
+	local expected = SourceUtil.prepareForLayout(template, scoped, 1)
+	scoped.Attributes.Source_Padding = UDim.new(0.5, 1000)
+	ParameterUtil.validate(scoped)
+	local measured = SourceUtil.getLayoutSize({ template }, scoped)
+	assert((measured - expected.Size).Magnitude < 0.001, `Single padding changed {method} bounds`)
+	local target = roblox.Instance.new("Folder")
+	definition.OnGenerate(scoped, target)
+	local copy = target:GetChildren()[1] :: RInstance
+	assert((copy.Size - expected.Size).Magnitude < 0.001, `Single padding changed {method} placement`)
+	expected:Destroy()
 	target:Destroy()
 end
 

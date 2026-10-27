@@ -42,6 +42,7 @@ local values: { [string]: any } = {
 	Layout_PopulationLimit = NumberRange.new(6),
 	Custom = "keep",
 	Source_Path = "keep.path",
+	Source_Padding = UDim.new(0.2, 3),
 }
 local model = {
 	GetAttribute = function(_self: unknown, name: string): any
@@ -76,6 +77,7 @@ assert(values.Layout_PopulationLimit == NumberRange.new(6))
 model:SetAttribute("Layout_Type", "Single")
 for _, name in
 	{
+		"Source_Padding",
 		"Layout_CurveSize0",
 		"Layout_CurveSize1",
 		"Layout_ColumnLimit",
@@ -87,6 +89,7 @@ do
 	assert(values[name] == nil and defaults[name] == nil, `Single retained {name}`)
 end
 model:SetAttribute("Layout_Type", "SurfaceGrid")
+assert(values.Source_Padding == UDim.new(0.2, 3), "surface padding should survive a switch through Single")
 assert(values.Layout_ColumnLimit == NumberRange.new(3, 7))
 assert(values.Layout_RowLimit == NumberRange.new(2, 5))
 model:SetAttribute("Layout_CurveSize0", UDim.new(-0.5, 99))
@@ -108,6 +111,7 @@ assert(activeConnections == 0)
 -- A sparse public snapshot gains only internal defaults, preserving source parameters and input identity.
 for _, kind in { "Single", "SurfaceGrid", "SurfaceRandom", "SurfaceCurvedLine" } do
 	local attributes = load.getDefaults(nil, kind)
+	assert((attributes.Source_Padding == nil) == (kind == "Single"), `wrong padding visibility for {kind}`)
 	local before = table.clone(attributes)
 	local pauses = 0
 	local parameters = {

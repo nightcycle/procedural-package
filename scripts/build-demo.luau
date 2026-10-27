@@ -41,7 +41,9 @@ for index, layout in layouts do
 	attributes.Source_Path = sourcePath
 	attributes.Source_PivotMethod = "Bottom"
 	attributes.Source_ScaleMethod = "Fit"
-	attributes.Source_Padding = UDim.new(0.05, 0)
+	if layout ~= "Single" then
+		attributes.Source_Padding = UDim.new(0.05, 0)
+	end
 	attributes.Layout_Type = layout
 	if layout == "SurfaceGrid" then
 		attributes.Layout_ColumnLimit = NumberRange.new(4)
@@ -86,6 +88,9 @@ for _, child in saved:GetChildren() do
 	assert(instance.Generator and instance.Generator.Parent == instance)
 	assert(instance.Name == instance:GetAttribute("Layout_Type"))
 	assert(instance:GetAttribute("Source_Path") == sourcePath)
+	if instance.Name == "Single" then
+		assert(instance:GetAttribute("Source_Padding") == nil)
+	end
 	if instance.Name ~= "SurfaceCurvedLine" then
 		assert(instance:GetAttribute("Layout_CurveSize0") == nil and instance:GetAttribute("Layout_CurveSize1") == nil)
 	end

@@ -4,6 +4,7 @@ local Util = require(script.Parent.Util)
 
 local Layout: Types.Layout = {
 	Parameters = {
+		Source_Padding = Util.Padding,
 		Layout_SurfaceDetectionMethod = Util.SurfaceDetection,
 		Layout_PopulationLimit = Util.Population,
 	},

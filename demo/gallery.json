@@ -15,7 +15,6 @@
         "Source_Alignment": "Floor",
         "Source_ExcludedTags": "",
         "Source_MaxYield": "15",
-        "Source_Padding": "0.05, 0",
         "Source_Path": "game.ReplicatedStorage.lib.ruin.pillar.Meshes/PolygonNature_Prop_Pillar_01",
         "Source_PathDelimiter": ".",
         "Source_PivotMethod": "Bottom",
