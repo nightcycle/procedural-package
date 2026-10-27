@@ -20,7 +20,7 @@ Only the selected layout's attributes appear on the ProceduralModel. Changing `L
 
 Pass the owning model to `Generator.new(model)` or `Generator.append(defaults, callback, model)` to keep the Properties panel synchronized. The constructor manages attribute changes outside `OnGenerate`; its optional `Destroy()` cleanup disconnects the binding, and destroying the model also disconnects it. Generators constructed without an owner still resolve missing layout fields internally but cannot edit a model's displayed attributes.
 
-When updating an already-open place, save and reopen it once if existing generators retain the old attribute list. Studio can keep previously required package exports cached even after their source changes; newly loaded generators use the new layout schema.
+When updating an already-open place, save and reopen it once if existing generators retain old behavior or attributes. Studio can keep previously required package exports cached even after their source changes; regenerating or reconnecting the same Generator may still use those exports. With a surface layout, `Source_ScaleMethod = "Fill"`, `Source_ScaleReference = "Height"`, and `Random_Scale = NumberRange.new(1)`, the generated height equals the area's height regardless of `Source_Padding`.
 
 ## Layouts
 
@@ -31,15 +31,19 @@ When updating an already-open place, save and reopen it once if existing generat
 | `SurfaceRandom` | Seeded, shuffled X/Z cells with random offsets inside each cell's free space. | `Layout_PopulationLimit`: NumberRange sampled as an integer count. |
 | `SurfaceCurvedLine` | Copies along a cubic Bézier curve from the front-left corner to the back-right corner, rotated along its horizontal tangent. | `Layout_PopulationLimit`, `Layout_CurveSize0`, `Layout_CurveSize1`. |
 
-`SurfaceGrid` calculates natural dimensions from the largest source footprint, including `Source_Padding`, then clamps them to the limits. Limits default to 1–100. Set both ends of a range to the same integer to fix a dimension, for example `NumberRange.new(4)` columns and `NumberRange.new(3)` rows produce 12 copies. Source overrides do not change the layout or its population.
+All layouts scale sources against the full generation box before calculating placement. Fitting and padding use the area's dimensions, independently of cell counts; placement then applies layout and random rotation without fitting again. Bounds are measured from the resulting geometry, including source overrides, fitting `Size` attributes, and Model scale limits. Mixed sources reserve the componentwise largest scaled bounds, using the maximum `Random_Scale` without consuming the seeded placement RNG. Random offsets subtract each copy's actual scaled and rotated bounds from its assigned region.
 
-Population limits default to 10 and may contain zero. A range must contain at least one nonnegative integer. Grid dimension ranges must start at 1 or greater.
+`SurfaceGrid` fits as many cells as possible using those scaled bounds, including X/Z `Source_Padding`, then clamps the counts to the limits. For example, a 1×1×1 source using Fill/Height in a 5×2×5 area becomes 2×2×2, so an unrestricted grid fits 2 columns and 2 rows. Centers are spaced by `area dimension / count`, with each footprint centered in its share of the area. Scaled source dimensions stay fixed: leftover space becomes gaps between cells, while a required count that cannot fit compresses the spacing so cells overlap. For a 5-stud dimension and 1-stud scaled footprint, limits `(0, 3)` produce 3 cells spaced `5/3` studs apart, and `(10, 10)` produce 10 cells spaced `0.5` studs apart. A single cell is centered; zero rows or columns produce no cells. Limits default to 1–100. Set both ends of a range to the same integer to fix a dimension, for example `NumberRange.new(4)` columns and `NumberRange.new(3)` rows produce 12 copies. Source overrides affect fitted bounds but do not override the area's layout or count limits.
+
+Population limits default to 10 and may contain zero. Population and grid dimension ranges must start at zero or greater and contain at least one integer.
 
 ### Curved line
 
 The curve starts at the exact front-left corner `(-Size.X / 2, 0, -Size.Z / 2)` and ends at the exact back-right corner `(Size.X / 2, 0, Size.Z / 2)`. Front is local -Z and right is local +X. These endpoints follow both area dimensions and are independent of population. Copy origins lie on the corners; their geometry may extend beyond the area.
 
-`Layout_CurveSize0` and `Layout_CurveSize1` remain signed handle lengths in studs, following [Beam's control point convention](https://create.roblox.com/docs/reference/engine/classes/Beam). The start tangent points inward from the front along +Z, and the end tangent points out through the right along +X. Internally, `P1 = P0 + Z * CurveSize0` and `P2 = P3 - X * CurveSize1`. Negative lengths reverse the corresponding handle, and zero lengths make a straight diagonal. Both lengths default to 12. Large lengths can extend the curve outside the area. No Vector3 control points or Attachments need to be positioned.
+`Layout_CurveSize0` and `Layout_CurveSize1` are signed `UDim` handle lengths, following [Beam's control point convention](https://create.roblox.com/docs/reference/engine/classes/Beam). Like padding, Scale is relative to the area and Offset is in studs: handle 0 resolves to `Size.Z * Scale + Offset`, and handle 1 resolves to `Size.X * Scale + Offset`. Both default to `UDim.new(0, 12)`. For example, `UDim.new(0.5, 0)` makes a handle half its corresponding area dimension. When migrating existing numeric attributes or ENV defaults, replace each number `n` with `UDim.new(0, n)` to preserve its length.
+
+The start tangent points inward from the front along +Z, and the end tangent points out through the right along +X. Internally, `P1 = P0 + Z * length0` and `P2 = P3 - X * length1`. Scale and Offset must be finite and may be negative; negative resolved lengths reverse the corresponding handle, and two zero lengths make a straight diagonal. Large lengths can extend the curve outside the area. No Vector3 control points or Attachments need to be positioned.
 
 Copies sample the curve at equal parameter intervals, including both endpoints. A population of one samples its midpoint. The curve follows the area's rotation and uses the shared alignment/surface rules for height.
 
@@ -51,9 +55,9 @@ Copies sample the curve at equal parameter intervals, including both endpoints. 
 | `Source_PathDelimiter` | `"."` | Separator used to resolve the path. |
 | `Source_MaxYield` | `15` | Maximum wait for the source, in seconds. |
 | `Source_PivotMethod` | `"Pivot"` | Origin used for scaling, rotation, and placement. |
-| `Source_ScaleMethod` | `"Stretch"` | Stretch BaseParts to their cell, uniformly Fill, or Fit without increasing source size. Models always scale uniformly. |
+| `Source_ScaleMethod` | `"Stretch"` | Stretch BaseParts to the generation area, uniformly Fill, or Fit without increasing source size. Models always scale uniformly. |
 | `Source_ScaleReference` | `"Min"` | Uniform fitting reference: `Height`, `Average`, `Min`, or `Max`. |
-| `Source_Padding` | `UDim.new(0.1, 0)` | Padding on each side of a cell; Scale must be in [0, 0.5), Offset nonnegative. |
+| `Source_Padding` | `UDim.new(0.1, 0)` | Insets the area before fitting and reserves space around grid footprints. Surface layouts pad only X/Z; Single pads all axes. Scale must be in [0, 0.5), Offset nonnegative. |
 | `Source_Alignment` | `"Floor"` | Place the selected origin on the area's floor, or use `"Center"` for the cell center. |
 | `Source_ExcludedTags` | `""` | Comma-separated tags excluded during folder selection. |
 | `Random_Seed` | `0` | Reproducible generation seed. |
@@ -181,10 +185,10 @@ Each story renders isolated geometry in a `ViewportFrame` with a camera and `Wor
 | `ParameterUtil/LayoutAttributes.story` | The exact visible attribute schema for each selected layout. |
 | `ParameterSchema/Ranges.story` | General/scale/population/grid range boundaries. |
 | `Layouts/Single/Layout.story` | The full-area cell. |
-| `Layouts/SurfaceGrid/Layout.story` | Natural grid dimensions, limits, padding, and source footprints. |
+| `Layouts/SurfaceGrid/Layout.story` | Post-scaling grid dimensions, limits, padding, and source footprints. |
 | `Layouts/SurfaceRandom/Layout.story` | Cell shuffling, populations, and normalized offsets. |
 | `Layouts/SurfaceCurvedLine/Curve.story` | Signed Beam handles, sampled frames, tangents, and zero/one populations. |
-| `Layouts/Util/GridMath.story` | Dimension clamping, cell partitioning, and pause intervals. |
+| `Layouts/Util/GridMath.story` | Dimension clamping, fixed cell footprints, gaps/overlap, partitioning, and pause intervals. |
 | `SurfaceUtil/Detection.story` | Raycast/Shapecast hits and misses against a sloped support with owner scale/rotation. |
 | `DebugStories/Attributes/Layouts.story` | Layout switching through the shared source/placement pipeline. |
 | `DebugStories/Attributes/Random.story` | Seeded placement plus random scale and X/Y/Z rotation groups. |

@@ -50,8 +50,8 @@ for index, layout in layouts do
 		attributes.Layout_PopulationLimit = NumberRange.new(12)
 	end
 	if layout == "SurfaceCurvedLine" then
-		attributes.Layout_CurveSize0 = 30
-		attributes.Layout_CurveSize1 = 30
+		attributes.Layout_CurveSize0 = UDim.new(0, 30)
+		attributes.Layout_CurveSize1 = UDim.new(0, 30)
 	end
 	attributes.Random_Seed = 2026
 	local settings: { [string]: string } = {}

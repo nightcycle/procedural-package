@@ -19,15 +19,18 @@ export type ScaleReference = "Height" | "Average" | "Min" | "Max"
 export type ScaleMethod = "Stretch" | "Fill" | "Fit"
 export type LayoutType = "Single" | "SurfaceGrid" | "SurfaceRandom" | "SurfaceCurvedLine"
 
-local function literal(...: string): (unknown) -> boolean
+export type Validator = (unknown) -> (boolean, string?)
+
+local function literal(...: string): Validator
 	local values = { ... }
-	return function(value: unknown): boolean
+	local expected = `expected one of: "{table.concat(values, '", "')}"`
+	return function(value: unknown): (boolean, string?)
 		for _, candidate in values do
 			if value == candidate then
-				return true
+				return true, nil
 			end
 		end
-		return false
+		return false, expected
 	end
 end
 
@@ -81,8 +84,8 @@ export type SurfaceRandomLayoutAttributes = BaseSurfaceLayoutAttributes & {
 	Layout_PopulationLimit: NumberRange,
 }
 export type SurfaceCurvedLineLayoutAttributes = SurfaceRandomLayoutAttributes & {
-	Layout_CurveSize0: number,
-	Layout_CurveSize1: number,
+	Layout_CurveSize0: UDim,
+	Layout_CurveSize1: UDim,
 }
 -- Public model attributes contain only the fields owned by the selected layout.
 export type PackageAttributes = BaseSourceAttributes & BaseRandomAttributes & BaseLayoutAttributes & {
@@ -90,8 +93,8 @@ export type PackageAttributes = BaseSourceAttributes & BaseRandomAttributes & Ba
 	Layout_ColumnLimit: NumberRange?,
 	Layout_RowLimit: NumberRange?,
 	Layout_PopulationLimit: NumberRange?,
-	Layout_CurveSize0: number?,
-	Layout_CurveSize1: number?,
+	Layout_CurveSize0: UDim?,
+	Layout_CurveSize1: UDim?,
 }
 -- Internal math receives a complete snapshot, without adding hidden fields to the model.
 export type ResolvedPackageAttributes =
@@ -114,13 +117,14 @@ export type GeneratorModuleDefinition<Attributes> = {
 }
 export type ParameterDefinition = {
 	Default: () -> unknown,
-	Validate: (unknown) -> boolean,
+	Validate: Validator,
 	TemplateOverride: boolean,
 }
 export type ParameterSchema = { [string]: ParameterDefinition }
 export type Cell = { Frame: CFrame, Size: Vector3, Offset: Vector3? }
 export type Layout = {
 	Parameters: ParameterSchema,
+	-- The size argument is the largest source bound after area fitting and random scale.
 	GetCells: (Parameters, Vector3, Random) -> { Cell },
 }
 

@@ -26,14 +26,21 @@ function Util.clampDimension(value: number, limit: NumberRange): number
 end
 
 -- Surface layouts always use one layer in the area's X/Z plane.
-function Util.grid(parameters: Types.Parameters, columns: number, rows: number): { Types.Cell }
+function Util.grid(parameters: Types.Parameters, columns: number, rows: number, naturalSize: Vector3?): { Types.Cell }
+	if columns == 0 or rows == 0 then
+		return {}
+	end
 	local size = parameters.Size
-	local cellSize = size / Vector3.new(columns, 1, rows)
+	local cellSize = naturalSize or size / Vector3.new(columns, 1, rows)
+	-- Center each fixed footprint in an equal share of the area.
+	-- Count limits change spacing, producing gaps or overlaps without resizing cells.
+	local step = Vector3.new(size.X / columns, 0, size.Z / rows)
+	local first = -step * Vector3.new(columns - 1, 0, rows - 1) / 2
 	local cells: { Types.Cell } = {}
 	for row = 0, rows - 1 do
 		for column = 0, columns - 1 do
 			table.insert(cells, {
-				Frame = CFrame.new(-size / 2 + cellSize / 2 + Vector3.new(column, 0, row) * cellSize),
+				Frame = CFrame.new(first + Vector3.new(column, 0, row) * step),
 				Size = cellSize,
 			})
 			Util.pause(parameters, #cells)

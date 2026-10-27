@@ -75,9 +75,14 @@ end
 
 local Util = {}
 
+local function assertValid(validator: Types.Validator, value: unknown, message: string)
+	local valid, reason = validator(value)
+	assert(valid, if reason then `{message}; {reason}` else message)
+end
+
 local function validate(schema: Types.ParameterSchema, attributes: Types.ExtraAttributes, context: string)
 	for name, definition in schema do
-		assert(definition.Validate(attributes[name]), `{context}: invalid {name} ({attributes[name]})`)
+		assertValid(definition.Validate, attributes[name], `{context}: invalid {name} ({attributes[name]})`)
 	end
 end
 
@@ -90,7 +95,7 @@ function Util.getDefaults(
 		defaults[name] = definition.Default()
 	end
 	local selected: Types.LayoutType = layoutType or ENV.DEFAULT_LAYOUT_TYPE
-	assert(Types.LayoutType(selected), `invalid Layout_Type: {selected}`)
+	assertValid(Types.LayoutType, selected, `invalid Layout_Type: {selected}`)
 	defaults.Layout_Type = selected
 	for name, definition in Layouts[selected].Parameters do
 		defaults[name] = definition.Default()
@@ -232,7 +237,7 @@ function Util.resolveTemplateAttributes(
 		end
 		local value: unknown = template:GetAttribute(name)
 		if value ~= nil then
-			assert(definition.Validate(value), `template "{template:GetFullName()}": invalid {name} ({value})`)
+			assertValid(definition.Validate, value, `template "{template:GetFullName()}": invalid {name} ({value})`)
 			resolved[name] = value
 		end
 	end

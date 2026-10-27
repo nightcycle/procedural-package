@@ -4,16 +4,14 @@ local Schema = require(script.Parent.Parent.ParameterSchema)
 local Types = require(script.Parent.Parent.Types)
 local Util = require(script.Parent.Util)
 
-local function getControlPoints(
-	size: Vector3,
-	curveSize0: number,
-	curveSize1: number
-): (Vector3, Vector3, Vector3, Vector3)
+local function getControlPoints(size: Vector3, curveSize0: UDim, curveSize1: UDim): (Vector3, Vector3, Vector3, Vector3)
 	-- Front is local -Z; right is local +X. Anchor origins at the exact corners.
 	local start = Vector3.new(-size.X / 2, 0, -size.Z / 2)
 	local finish = Vector3.new(size.X / 2, 0, size.Z / 2)
+	local length0 = size.Z * curveSize0.Scale + curveSize0.Offset
+	local length1 = size.X * curveSize1.Scale + curveSize1.Offset
 	-- Enter from the front along +Z, and leave through the right along +X.
-	return start, start + Vector3.zAxis * curveSize0, finish - Vector3.xAxis * curveSize1, finish
+	return start, start + Vector3.zAxis * length0, finish - Vector3.xAxis * length1, finish
 end
 
 local Layout: Types.Layout & { GetControlPoints: typeof(getControlPoints) } = {
@@ -23,15 +21,15 @@ local Layout: Types.Layout & { GetControlPoints: typeof(getControlPoints) } = {
 		Layout_PopulationLimit = Util.Population,
 		Layout_CurveSize0 = Schema.field(function()
 			return ENV.DEFAULT_LAYOUT_CURVE_SIZE_0
-		end, Schema.finite),
+		end, Schema.udim),
 		Layout_CurveSize1 = Schema.field(function()
 			return ENV.DEFAULT_LAYOUT_CURVE_SIZE_1
-		end, Schema.finite),
+		end, Schema.udim),
 	},
-	GetCells = function(parameters: Types.Parameters, _templateSize: Vector3, random: Random): { Types.Cell }
+	GetCells = function(parameters: Types.Parameters, sourceSize: Vector3, random: Random): { Types.Cell }
 		local count = Util.sampleCount(parameters.Attributes.Layout_PopulationLimit, random)
 		local size = parameters.Size
-		local cellSize = Vector3.new(size.X / math.max(count, 1), size.Y, size.Z)
+		local cellSize = Vector3.new(sourceSize.X, size.Y, sourceSize.Z)
 		local start, control0, control1, finish =
 			getControlPoints(size, parameters.Attributes.Layout_CurveSize0, parameters.Attributes.Layout_CurveSize1)
 		local cells: { Types.Cell } = {}

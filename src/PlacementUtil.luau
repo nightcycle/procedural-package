@@ -32,16 +32,8 @@ function Util.run(
 			)
 		local range = attributes.Random_Scale
 		local scale = if range.Min == range.Max then range.Min else random:NextNumber(range.Min, range.Max)
-		local instance = SourceUtil.prepareClone(
-			copy.Template,
-			cell.Size,
-			rotation,
-			attributes.Source_ScaleMethod,
-			attributes.Source_ScaleReference,
-			scale,
-			attributes.Source_Padding,
-			attributes.Source_PivotMethod
-		)
+		local instance = SourceUtil.prepareForLayout(copy.Template, scoped, scale)
+		instance:PivotTo(rotation)
 		local center = cell.Frame.Position
 		if cell.Offset then
 			local _, boundsSize = GeometryUtil.getBounds(instance)

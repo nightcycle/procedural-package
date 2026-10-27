@@ -7,7 +7,7 @@ local Layout: Types.Layout = {
 		Layout_SurfaceDetectionMethod = Util.SurfaceDetection,
 		Layout_PopulationLimit = Util.Population,
 	},
-	GetCells = function(parameters: Types.Parameters, _templateSize: Vector3, random: Random): { Types.Cell }
+	GetCells = function(parameters: Types.Parameters, _sourceSize: Vector3, random: Random): { Types.Cell }
 		local count = Util.sampleCount(parameters.Attributes.Layout_PopulationLimit, random)
 		if count == 0 then
 			return {}

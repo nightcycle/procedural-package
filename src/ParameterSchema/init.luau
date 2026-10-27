@@ -4,7 +4,7 @@ local Schema = {}
 
 function Schema.field(
 	default: () -> unknown,
-	validate: (unknown) -> boolean,
+	validate: Types.Validator,
 	templateOverride: boolean?
 ): Types.ParameterDefinition
 	return { Default = default, Validate = validate, TemplateOverride = templateOverride == true }
@@ -12,6 +12,10 @@ end
 
 function Schema.finite(value: unknown): boolean
 	return typeof(value) == "number" and value == value and math.abs(value) < math.huge
+end
+
+function Schema.udim(value: unknown): boolean
+	return typeof(value) == "UDim" and Schema.finite(value.Scale) and Schema.finite(value.Offset)
 end
 
 function Schema.nonNegative(value: unknown): boolean
@@ -37,7 +41,7 @@ function Schema.countRange(value: unknown): boolean
 end
 
 function Schema.dimensionRange(value: unknown): boolean
-	return Schema.countRange(value) and (value :: NumberRange).Min >= 1
+	return Schema.countRange(value)
 end
 
 function Schema.vector(value: unknown): boolean

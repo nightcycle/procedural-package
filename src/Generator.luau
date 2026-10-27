@@ -4,7 +4,6 @@ local Types = require(script.Parent.Types)
 local ParameterUtil = require(script.Parent.ParameterUtil)
 local SourceUtil = require(script.Parent.SourceUtil)
 local PlacementUtil = require(script.Parent.PlacementUtil)
-local GeometryUtil = require(script.Parent.GeometryUtil)
 local DebugUtil = require(script.Parent.DebugUtil)
 
 local function newGenerator(
@@ -36,20 +35,8 @@ local function newGenerator(
 			end
 			local random = Random.new(parameters.Attributes.Random_Seed)
 			local templates = SourceUtil.run(parameters)
-			-- Use the largest source footprint so mixed folders have stable, conservative grid spacing.
-			local templateSize = Vector3.zero
-			for index, template in templates do
-				local _, size = GeometryUtil.getBounds(template)
-				templateSize = templateSize:Max(size)
-				if index % parameters.Attributes.Layout_PauseInterval == 0 then
-					parameters:Pause()
-				end
-			end
-			assert(
-				templateSize.X > 0 and templateSize.Y > 0 and templateSize.Z > 0,
-				"sources must have positive dimensions"
-			)
-			local cells = layout.GetCells(parameters, templateSize, random)
+			local sourceSize = SourceUtil.getLayoutSize(templates, parameters, extraDefaults)
+			local cells = layout.GetCells(parameters, sourceSize, random)
 			local copies = SourceUtil.getCopies(templates, #cells, parameters, random, extraDefaults)
 			PlacementUtil.run(parameters, copies, cells, random, target, callback, model)
 			if ENV.DEBUG_AREA_ENABLED then

@@ -4,7 +4,6 @@ local Types = require(Package.Types)
 local ParameterUtil = require(Package.ParameterUtil)
 local SourceUtil = require(Package.SourceUtil)
 local PlacementUtil = require(Package.PlacementUtil)
-local GeometryUtil = require(Package.GeometryUtil)
 local Fixtures = require(script.Parent.Fixtures)
 local Viewport = require(script.Parent.Viewport)
 local Preview = {}
@@ -46,8 +45,8 @@ function Preview.generate(
 ): number
 	local layout = ParameterUtil.validate(parameters)
 	local random = Random.new(parameters.Attributes.Random_Seed)
-	local _, templateSize = GeometryUtil.getBounds(template)
-	local cells = layout.GetCells(parameters, templateSize, random)
+	local sourceSize = SourceUtil.getLayoutSize({ template }, parameters)
+	local cells = layout.GetCells(parameters, sourceSize, random)
 	local copies = SourceUtil.getCopies({ template }, #cells, parameters, random, nil)
 	local output = Instance.new("Folder")
 	output.Name = "Generated"

@@ -62,7 +62,8 @@ function Util.prepareClone(
 	scaleRef: Types.ScaleReference,
 	randomScale: number,
 	padding: UDim,
-	pivotMethod: Types.PivotMethod
+	pivotMethod: Types.PivotMethod,
+	paddingAxes: Vector3?
 ): Template
 	assert(template.Archivable, `template "{template:GetFullName()}" must be Archivable`)
 	local instance = template:Clone()
@@ -71,7 +72,9 @@ function Util.prepareClone(
 	end
 	-- Measure in the generated orientation, including any native pivot rotation.
 	instance:PivotTo(rotation)
-	size -= padding.Offset * Vector3.one * 2
+	local axes = paddingAxes or Vector3.one
+	-- Inset the target dimensions before fitting, so unpadded axes keep their full extent.
+	size = (size - axes * padding.Offset * 2) * (Vector3.one - axes * padding.Scale * 2)
 	assert(size.X > 0 and size.Y > 0 and size.Z > 0, "Source_Padding.Offset leaves no room inside the layout cell")
 	local uniformScale = randomScale
 	if instance:IsA("BasePart") and scaleMethod == "Stretch" then
@@ -108,7 +111,7 @@ function Util.prepareClone(
 		if scaleMethod == "Fit" then
 			scale = math.min(scale, 1)
 		end
-		uniformScale *= scale * (1 - padding.Scale * 2)
+		uniformScale *= scale
 	end
 	-- Apply the combined multiplier once so a minimum Model scale clamp does not
 	-- distort the result when RandomScale follows the fitting scale.
@@ -117,6 +120,43 @@ function Util.prepareClone(
 	end
 	instance:PivotTo(rotation)
 	return instance
+end
+
+-- Fit once against the generation area, before layout spacing or orientation.
+function Util.prepareForLayout(template: Template, parameters: Parameters, randomScale: number): Template
+	local attributes = parameters.Attributes
+	return Util.prepareClone(
+		template,
+		parameters.Size,
+		CFrame.identity,
+		attributes.Source_ScaleMethod,
+		attributes.Source_ScaleReference,
+		randomScale,
+		attributes.Source_Padding,
+		attributes.Source_PivotMethod,
+		if attributes.Layout_Type == "Single" then Vector3.one else Vector3.new(1, 0, 1)
+	)
+end
+
+function Util.getLayoutSize(
+	templates: { Template },
+	parameters: Parameters,
+	extraDefaults: Types.ExtraAttributes?
+): Vector3
+	local size = Vector3.zero
+	for index, template in templates do
+		local scoped = ParameterUtil.resolveTemplateAttributes(template, parameters, extraDefaults)
+		-- Reserve the largest possible random scale without consuming the generation RNG.
+		local instance = Util.prepareForLayout(template, scoped, scoped.Attributes.Random_Scale.Max)
+		local _, boundsSize = GeometryUtil.getBounds(instance)
+		instance:Destroy()
+		size = size:Max(boundsSize)
+		if index % parameters.Attributes.Layout_PauseInterval == 0 then
+			parameters:Pause()
+		end
+	end
+	assert(size.X > 0 and size.Y > 0 and size.Z > 0, "sources must have positive scaled dimensions")
+	return size
 end
 
 function Util.getCopies(

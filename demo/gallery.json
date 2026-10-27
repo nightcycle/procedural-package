@@ -76,8 +76,8 @@
       "InstancePath": "game.Workspace.examples.SurfaceCurvedLine",
       "LayoutType": "SurfaceCurvedLine",
       "Settings": {
-        "Layout_CurveSize0": "30",
-        "Layout_CurveSize1": "30",
+        "Layout_CurveSize0": "0, 30",
+        "Layout_CurveSize1": "0, 30",
         "Layout_PauseInterval": "100",
         "Layout_PopulationLimit": "12, 12",
         "Layout_SurfaceDetectionMethod": "None",

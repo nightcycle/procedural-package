@@ -19,8 +19,10 @@ return Story.create(
 		Columns = UILabs.Slider(4, 1, 10, 1),
 		Rows = UILabs.Slider(3, 1, 10, 1),
 		Population = UILabs.Slider(12, 0, 80, 1),
-		Layout_CurveSize0 = UILabs.Slider(12, -40, 40, 1),
-		Layout_CurveSize1 = UILabs.Slider(12, -40, 40, 1),
+		CurveSize0Scale = UILabs.Slider(0, -2, 2, 0.05),
+		CurveSize0Offset = UILabs.Slider(12, -40, 40, 1),
+		CurveSize1Scale = UILabs.Slider(0, -2, 2, 0.05),
+		CurveSize1Offset = UILabs.Slider(12, -40, 40, 1),
 		AsModel = true,
 		ShowCells = true,
 	},
@@ -31,8 +33,14 @@ return Story.create(
 			Layout_ColumnLimit = NumberRange.new(Controls.number(values, "Columns")),
 			Layout_RowLimit = NumberRange.new(Controls.number(values, "Rows")),
 			Layout_PopulationLimit = NumberRange.new(Controls.number(values, "Population")),
-			Layout_CurveSize0 = Controls.number(values, "Layout_CurveSize0"),
-			Layout_CurveSize1 = Controls.number(values, "Layout_CurveSize1"),
+			Layout_CurveSize0 = UDim.new(
+				Controls.number(values, "CurveSize0Scale"),
+				Controls.number(values, "CurveSize0Offset")
+			),
+			Layout_CurveSize1 = UDim.new(
+				Controls.number(values, "CurveSize1Scale"),
+				Controls.number(values, "CurveSize1Offset")
+			),
 		})
 		local template = Fixtures.template(Controls.boolean(values, "AsModel"))
 		scene.Keep(template)
