@@ -28,6 +28,18 @@ function Util.axisAlignedSize(frame: CFrame, size: Vector3): Vector3
 		math.abs(right.Z) * size.X + math.abs(up.Z) * size.Y + math.abs(look.Z) * size.Z
 	)
 end
+
+-- Keep a horizontal footprint inside the area without changing its scale or height.
+-- If a footprint exceeds an axis, center it there as no translation can make it fit.
+function Util.clampSurfaceCenter(center: Vector3, size: Vector3, areaSize: Vector3): Vector3
+	local available = (areaSize - size):Max(Vector3.zero) / 2
+	return Vector3.new(
+		math.clamp(center.X, -available.X, available.X),
+		center.Y,
+		math.clamp(center.Z, -available.Z, available.Z)
+	)
+end
+
 function Util.getExtents(instance: Template): (CFrame, Vector3)
 	if instance:IsA("BasePart") then
 		return instance.CFrame, instance.Size

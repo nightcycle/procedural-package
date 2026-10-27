@@ -133,15 +133,18 @@ local footprint = Vector3.new(4, 6, 5)
 local unrestricted = NumberRange.new(1, 100)
 local natural = gridCells(area, footprint, unrestricted, unrestricted)
 assert(#natural == 15, "grid should fit five columns and three rows at the source footprint")
-assert((natural[1].Frame.Position - Vector3.new(-9.2, 0, -17 / 3)).Magnitude < 0.001)
-assert((natural[15].Frame.Position - Vector3.new(9.2, 0, 17 / 3)).Magnitude < 0.001)
-assert(math.abs(natural[2].Frame.X - natural[1].Frame.X - 4.6) < 0.001, "remainder should become gaps")
+assert((natural[1].Frame.Position - Vector3.new(-9.5, 0, -6)).Magnitude < 0.001)
+assert((natural[15].Frame.Position - Vector3.new(9.5, 0, 6)).Magnitude < 0.001)
+assert(math.abs(natural[2].Frame.X - natural[1].Frame.X - 4.75) < 0.001, "remainder should become internal gaps")
 local sparse = gridCells(area, footprint, NumberRange.new(1, 2), NumberRange.new(1, 2))
 assert(#sparse == 4 and sparse[2].Frame.X - sparse[1].Frame.X > footprint.X, "count cap should add gaps")
 local crowded = gridCells(area, footprint, NumberRange.new(8, 10), NumberRange.new(5, 8))
 assert(#crowded == 40 and crowded[2].Frame.X - crowded[1].Frame.X < footprint.X, "minimum count should overlap")
 assert(crowded[9].Frame.Z - crowded[1].Frame.Z < footprint.Z, "rows should overlap independently")
 for _, group in { natural, sparse, crowded } do
+	local first, last = group[1], group[#group]
+	assert((first.Frame.Position - Vector3.new(-9.5, 0, -6)).Magnitude < 0.001, "front-left footprint must be flush")
+	assert((last.Frame.Position - Vector3.new(9.5, 0, 6)).Magnitude < 0.001, "back-right footprint must be flush")
 	for _, cell in group do
 		assert(cell.Size == Vector3.new(4, 12, 5), "grid count limits must not resize cells")
 	end
@@ -150,23 +153,31 @@ assert(#gridCells(Vector3.new(31, 12, 22), footprint, unrestricted, unrestricted
 assert(#gridCells(area, Vector3.new(8, 6, 5), unrestricted, unrestricted) == 6, "source resize must re-solve counts")
 local oversized = gridCells(Vector3.new(2, 12, 2), footprint, NumberRange.new(3), NumberRange.new(2))
 assert(#oversized == 6)
-assert((oversized[1].Frame.Position - Vector3.new(-2 / 3, 0, -0.5)).Magnitude < 0.001)
-assert((oversized[6].Frame.Position - Vector3.new(2 / 3, 0, 0.5)).Magnitude < 0.001)
 for _, cell in oversized do
+	assert(cell.Frame.Position == Vector3.zero, "oversized footprints must stay centered without reversing order")
 	assert(cell.Size == Vector3.new(4, 12, 5), "oversized footprints should overlap without resizing")
 end
 local padded = gridCells(area, footprint, unrestricted, unrestricted, UDim.new(0.1, 2))
 assert(#padded == 2 and padded[1].Size == Vector3.new(9, 12, 10.25), "padding should reserve only X/Z footprint space")
+assert(padded[1].Frame.Position == Vector3.new(-7, 0, 0) and padded[2].Frame.Position == Vector3.new(7, 0, 0))
 local centered = gridCells(area, footprint, NumberRange.new(1), NumberRange.new(1))
 assert(centered[1].Frame.Position == Vector3.zero and centered[1].Size == Vector3.new(4, 12, 5))
+local narrow = gridCells(Vector3.new(2, 12, 17), footprint, NumberRange.new(3), NumberRange.new(3))
+assert(narrow[1].Frame.Position == Vector3.new(0, 0, -6) and narrow[9].Frame.Position == Vector3.new(0, 0, 6))
 
--- Equal shares of a five-stud dimension reproduce the requested spacing on either axis.
+-- Random placement still partitions the area into equal regions without a natural footprint.
+local partition = load("src/Layouts/Util").grid(parameters, 4, 3)
+assert(#partition == 12 and partition[1].Size == Vector3.new(20, 24, 20))
+assert(partition[1].Frame.Position == Vector3.new(-30, 0, -20))
+assert(partition[12].Frame.Position == Vector3.new(30, 0, 20))
+
+-- Outer footprint edges reach both ends of a five-stud dimension on either axis.
 for _, case in
 	{
-		{ Limit = NumberRange.new(0, 3), Count = 3, Step = 5 / 3 },
-		{ Limit = NumberRange.new(10), Count = 10, Step = 0.5 },
+		{ Limit = NumberRange.new(0, 3), Count = 3, Step = 2 },
+		{ Limit = NumberRange.new(10), Count = 10, Step = 4 / 9 },
 		{ Limit = NumberRange.new(1, 10), Count = 5, Step = 1 },
-		{ Limit = NumberRange.new(1.1, 3.9), Count = 3, Step = 5 / 3 },
+		{ Limit = NumberRange.new(1.1, 3.9), Count = 3, Step = 2 },
 	}
 do
 	for _, alongX in { true, false } do
@@ -179,7 +190,7 @@ do
 		assert(#cells == case.Count, "count should clamp the natural fit to the dimension limit")
 		for index, cell in cells do
 			local coordinate = if alongX then cell.Frame.X else cell.Frame.Z
-			assert(math.abs(coordinate - (-2.5 + (index - 0.5) * case.Step)) < 0.001)
+			assert(math.abs(coordinate - (-2 + (index - 1) * case.Step)) < 0.001)
 			assert(cell.Size == Vector3.new(1, 12, 1), "spacing must not change fitting dimensions")
 		end
 	end
@@ -296,9 +307,14 @@ for _, count in { 3, 10 } do
 	local target = roblox.Instance.new("Folder")
 	definition.OnGenerate(scaledParameters, target)
 	assert(#target:GetChildren() == count)
+	local minimumX, maximumX = math.huge, -math.huge
 	for _, copy in target:GetChildren() :: { RInstance } do
 		assert(copy.Size == Vector3.new(2, 2, 2), "grid limits must not refit scaled sources")
+		minimumX = math.min(minimumX, copy.CFrame.X - copy.Size.X / 2)
+		maximumX = math.max(maximumX, copy.CFrame.X + copy.Size.X / 2)
+		assert(copy.CFrame.Z == 0, "a single grid row must stay centered")
 	end
+	assert(math.abs(minimumX + 2.5) < 0.001 and math.abs(maximumX - 2.5) < 0.001, "generated edges must be flush")
 	target:Destroy()
 end
 scaledParameters.Attributes.Layout_ColumnLimit = NumberRange.new(0, 100)
@@ -399,26 +415,173 @@ for _, copy in generate() do
 end
 attributes.Source_Alignment = "Floor"
 
--- Cubic curve endpoints and midpoint, including Beam's signed handle behavior.
+local function referenceHalfExtents(rotation: CFrame, size: Vector3): Vector3
+	local half = Vector3.zero
+	for x = -1, 1, 2 do
+		for y = -1, 1, 2 do
+			for z = -1, 1, 2 do
+				local corner = rotation:VectorToWorldSpace(size * Vector3.new(x, y, z) / 2)
+				half = half:Max(Vector3.new(math.abs(corner.X), math.abs(corner.Y), math.abs(corner.Z)))
+			end
+		end
+	end
+	return half
+end
+
+local function assertWithinSurface(frame: CFrame, size: Vector3, areaSize: Vector3)
+	for x = -1, 1, 2 do
+		for y = -1, 1, 2 do
+			for z = -1, 1, 2 do
+				local corner = frame:PointToWorldSpace(size * Vector3.new(x, y, z) / 2)
+				assert(math.abs(corner.X) <= areaSize.X / 2 + 0.001, "curve geometry crossed an X boundary")
+				assert(math.abs(corner.Z) <= areaSize.Z / 2 + 0.001, "curve geometry crossed a Z boundary")
+			end
+		end
+	end
+end
+
+-- Compare distance samples and their footprint offsets to an independent dense cubic.
+local function assertArcSpacing(scoped: any, cells: { any }): number
+	local start = Vector3.new(-scoped.Size.X / 2, 0, -scoped.Size.Z / 2)
+	local finish = -start
+	local handle0, handle1 = scoped.Attributes.Layout_CurveSize0, scoped.Attributes.Layout_CurveSize1
+	local control0 = start + Vector3.zAxis * (scoped.Size.Z * handle0.Scale + handle0.Offset)
+	local control1 = finish - Vector3.xAxis * (scoped.Size.X * handle1.Scale + handle1.Offset)
+	local samples = { { Position = start, Distance = 0 } }
+	local total, previous = 0, start
+	for index = 1, 4096 do
+		local t = index / 4096
+		local position = start * (1 - t) ^ 3
+			+ control0 * 3 * t * (1 - t) ^ 2
+			+ control1 * 3 * t ^ 2 * (1 - t)
+			+ finish * t ^ 3
+		total += (position - previous).Magnitude
+		table.insert(samples, { Position = position, Distance = total })
+		previous = position
+	end
+	local segment = 2
+	for index, cell in cells do
+		local distance = total * (if #cells == 1 then 0.5 else (index - 1) / (#cells - 1))
+		while segment < #samples and samples[segment].Distance < distance do
+			segment += 1
+		end
+		local before, after = samples[segment - 1], samples[segment]
+		local span = after.Distance - before.Distance
+		local expected =
+			before.Position:Lerp(after.Position, if span > 0 then (distance - before.Distance) / span else 0)
+		if #cells > 1 and (index == 1 or index == #cells) then
+			local padding = scoped.Attributes.Source_Padding
+			local padded = Vector3.new(
+				cell.Size.X / (1 - padding.Scale * 2) + padding.Offset * 2,
+				cell.Size.Y,
+				cell.Size.Z / (1 - padding.Scale * 2) + padding.Offset * 2
+			)
+			local half = referenceHalfExtents(cell.Frame.Rotation, padded)
+			local available = (scoped.Size / 2 - half):Max(Vector3.zero)
+			expected = Vector3.new(
+				math.clamp(expected.X, -available.X, available.X),
+				expected.Y,
+				math.clamp(expected.Z, -available.Z, available.Z)
+			)
+		end
+		assert(
+			(cell.Frame.Position - expected).Magnitude < math.max(0.002, total * 0.0001),
+			"uneven curve distance spacing"
+		)
+	end
+	return total
+end
+
+-- Curved populations clamp a natural fit, independently of RNG and source depth.
+local curveParameters = table.clone(parameters)
+curveParameters.Size = Vector3.new(3, 12, 4) -- A five-stud diagonal.
+curveParameters.Attributes = table.clone(attributes)
+curveParameters.Attributes.Layout_Type = "SurfaceCurvedLine"
+curveParameters.Attributes.Layout_CurveSize0 = UDim.new(0)
+curveParameters.Attributes.Layout_CurveSize1 = UDim.new(0)
+for _, case in
+	{
+		{ Limit = NumberRange.new(0, 3), Count = 3 },
+		{ Limit = NumberRange.new(10), Count = 10 },
+		{ Limit = NumberRange.new(1, 10), Count = 5 },
+		{ Limit = NumberRange.new(1.1, 3.9), Count = 3 },
+		{ Limit = NumberRange.new(0), Count = 0 },
+	}
+do
+	curveParameters.Attributes.Layout_PopulationLimit = case.Limit
+	local firstRandom, secondRandom = random(1), random(2026)
+	local first = Layouts.SurfaceCurvedLine.GetCells(curveParameters, Vector3.new(1, 6, 20), firstRandom)
+	local second = Layouts.SurfaceCurvedLine.GetCells(curveParameters, Vector3.new(1, 6, 20), secondRandom)
+	assert(
+		#first == case.Count and #second == case.Count,
+		"curve should clamp natural count instead of sampling the range"
+	)
+	assert(firstRandom:NextNumber(0, 1) == random(1):NextNumber(0, 1), "curve layout should not consume RNG")
+	assertArcSpacing(curveParameters, first)
+	for index, cell in first do
+		assert(cell.Frame == second[index].Frame, "curve placement must be independent of seed")
+		assert(cell.Size == Vector3.new(1, 12, 20), "population limits must not resize scaled sources")
+	end
+end
+curveParameters.Attributes.Layout_PopulationLimit = NumberRange.new(0, 100)
+assert(#Layouts.SurfaceCurvedLine.GetCells(curveParameters, Vector3.new(2, 6, 1), random(1)) == 2)
+assert(#Layouts.SurfaceCurvedLine.GetCells(curveParameters, Vector3.new(10, 6, 1), random(1)) == 0)
+curveParameters.Attributes.Source_Padding = UDim.new(0.1, 1)
+assert(
+	#Layouts.SurfaceCurvedLine.GetCells(curveParameters, Vector3.one, random(1)) == 1,
+	"curve fit should reserve scale and offset padding along the tangent"
+)
+curveParameters.Attributes.Source_Padding = UDim.new(0)
+curveParameters.Attributes.Layout_CurveSize0 = UDim.new(0, 30)
+curveParameters.Attributes.Layout_CurveSize1 = UDim.new(0, -20)
+local bent = Layouts.SurfaceCurvedLine.GetCells(curveParameters, Vector3.one, random(1))
+local bentLength = assertArcSpacing(curveParameters, bent)
+assert(#bent == math.floor(bentLength), "population should use curve length rather than the diagonal")
+assert(#bent > 5, "long handles should increase the natural population")
+curveParameters.Attributes.Layout_PopulationLimit = NumberRange.new(1)
+assertArcSpacing(curveParameters, Layouts.SurfaceCurvedLine.GetCells(curveParameters, Vector3.one, random(1)))
+
+-- Production generation counts the post-scaling footprint and reserves maximum random scale.
+local curveSourceSize = template.Size
+template.Size = Vector3.one
+curveParameters.Attributes.Layout_PopulationLimit = NumberRange.new(0, 100)
+curveParameters.Attributes.Layout_CurveSize0 = UDim.new(0)
+curveParameters.Attributes.Layout_CurveSize1 = UDim.new(0)
+curveParameters.Size = Vector3.new(3, 2, 4)
+curveParameters.Attributes.Source_ScaleMethod = "Fill"
+curveParameters.Attributes.Source_ScaleReference = "Height"
+for _, multiplier in { 1, 2 } do
+	curveParameters.Attributes.Random_Scale = NumberRange.new(multiplier)
+	local target = roblox.Instance.new("Folder")
+	definition.OnGenerate(curveParameters, target)
+	assert(#target:GetChildren() == (if multiplier == 1 then 2 else 1), "curve count ignored scaled bounds")
+	for _, copy in target:GetChildren() :: { RInstance } do
+		assert(copy.Size == Vector3.one * 2 * multiplier, "curve population must preserve fitted scale")
+	end
+	target:Destroy()
+end
+template.Size = curveSourceSize
+
+-- Cubic curve endpoints and distance midpoint, including Beam's signed handle behavior.
 attributes.Layout_Type = "SurfaceCurvedLine"
 attributes.Layout_PopulationLimit = NumberRange.new(3)
 local cells = Layouts.SurfaceCurvedLine.GetCells(parameters, template.Size, random(1))
 local frontLeft = Vector3.new(-parameters.Size.X / 2, 0, -parameters.Size.Z / 2)
 local backRight = -frontLeft
-assert((cells[1].Frame.Position - frontLeft).Magnitude < 0.001, "curve must start at the front-left corner")
-assert((cells[3].Frame.Position - backRight).Magnitude < 0.001, "curve must finish at the back-right corner")
+assert(
+	(cells[1].Frame.Position - (frontLeft + Vector3.new(template.Size.Z / 2, 0, template.Size.X / 2))).Magnitude < 0.001,
+	"curve start should be inset by its rotated bounds"
+)
+assert(
+	(cells[3].Frame.Position - (backRight - Vector3.new(template.Size.X / 2, 0, template.Size.Z / 2))).Magnitude < 0.001,
+	"curve finish should be inset by its rotated bounds"
+)
 assert((cells[1].Frame.RightVector - Vector3.zAxis).Magnitude < 0.001, "curve must enter through the front")
 assert((cells[3].Frame.RightVector - Vector3.xAxis).Magnitude < 0.001, "curve must leave through the right")
-assert(
-	(cells[2].Frame.Position - Vector3.new(-7.5, 0, 7.5)).Magnitude < 0.001,
-	"cubic midpoint must use the signed perpendicular handles"
-)
+assertArcSpacing(parameters, cells)
 attributes.Layout_CurveSize0, attributes.Layout_CurveSize1 = UDim.new(0, -20), UDim.new(0, -20)
 cells = Layouts.SurfaceCurvedLine.GetCells(parameters, template.Size, random(1))
-assert(
-	(cells[2].Frame.Position - Vector3.new(7.5, 0, -7.5)).Magnitude < 0.001,
-	"negative handles should reverse the bend"
-)
+assertArcSpacing(parameters, cells)
 attributes.Layout_CurveSize0, attributes.Layout_CurveSize1 = UDim.new(0, 0), UDim.new(0, 0)
 cells = Layouts.SurfaceCurvedLine.GetCells(parameters, template.Size, random(1))
 local diagonal = (backRight - frontLeft).Unit
@@ -431,12 +594,9 @@ for _, dimensions in { Vector3.new(120, 24, 10), Vector3.new(10, 24, 120) } do
 	for _, count in { 2, 5 } do
 		attributes.Layout_PopulationLimit = NumberRange.new(count)
 		cells = Layouts.SurfaceCurvedLine.GetCells(parameters, template.Size, random(1))
-		local corner = Vector3.new(-dimensions.X / 2, 0, -dimensions.Z / 2)
-		assert((cells[1].Frame.Position - corner).Magnitude < 0.001)
-		assert(
-			(cells[count].Frame.Position + corner).Magnitude < 0.001,
-			"resizing and population changes must preserve exact corner endpoints"
-		)
+		for _, cell in cells do
+			assertWithinSurface(cell.Frame, Vector3.new(template.Size.X, dimensions.Y, template.Size.Z), dimensions)
+		end
 	end
 	parameters.Size = previousSize
 end
@@ -452,13 +612,92 @@ local curveAreaSize = parameters.Size
 for _, dimensions in { Vector3.new(80, 24, 60), Vector3.new(120, 24, 20) } do
 	parameters.Size = dimensions
 	cells = Layouts.SurfaceCurvedLine.GetCells(parameters, template.Size, random(1))
-	local expected = if dimensions.X == 80 then Vector3.new(3.75, 0, 13.125) else Vector3.new(7.5, 0, 5.625)
-	assert((cells[2].Frame.Position - expected).Magnitude < 0.001, "UDim handles must follow depth / width")
+	local start, control0, control1, finish = Layouts.SurfaceCurvedLine.GetControlPoints(
+		dimensions,
+		attributes.Layout_CurveSize0,
+		attributes.Layout_CurveSize1
+	)
+	assert((control0 - start - Vector3.zAxis * (dimensions.Z * 0.5 + 5)).Magnitude < 0.001)
+	assert((finish - control1 - Vector3.xAxis * (dimensions.X * -0.25 + 10)).Magnitude < 0.001)
+	assertArcSpacing(parameters, cells)
 	assert((cells[1].Frame.RightVector - Vector3.zAxis).Magnitude < 0.001)
 	assert((cells[3].Frame.RightVector + Vector3.xAxis).Magnitude < 0.001)
 	assert(#generate() == 3, "signed UDim handles must pass generation validation")
 end
 parameters.Size = curveAreaSize
+
+-- Endpoints stay inside; intermediate samples follow the curve even when it leaves the area.
+local contained = table.clone(parameters)
+contained.Attributes = table.clone(attributes)
+contained.Size = Vector3.new(30, 12, 20)
+contained.Attributes.Layout_Type = "SurfaceCurvedLine"
+contained.Attributes.Source_Padding = UDim.new(0.1, 1)
+for _, population in { 1, 3, 30 } do
+	contained.Attributes.Layout_PopulationLimit = NumberRange.new(population)
+	for _, handles in { { Start = 12, Finish = 12 }, { Start = -40, Finish = -20 }, { Start = 80, Finish = 60 } } do
+		contained.Attributes.Layout_CurveSize0 = UDim.new(0, handles.Start)
+		contained.Attributes.Layout_CurveSize1 = UDim.new(0, handles.Finish)
+		local cells = Layouts.SurfaceCurvedLine.GetCells(contained, Vector3.new(6, 8, 2), random(1))
+		assert(#cells == population)
+		assertArcSpacing(contained, cells)
+		if population > 1 then
+			assertWithinSurface(cells[1].Frame, Vector3.new(6, 8, 2), contained.Size)
+			assertWithinSurface(cells[#cells].Frame, Vector3.new(6, 8, 2), contained.Size)
+		end
+	end
+end
+
+contained.Attributes.Layout_PopulationLimit = NumberRange.new(3)
+contained.Attributes.Layout_CurveSize0 = UDim.new(0, 80)
+contained.Attributes.Layout_CurveSize1 = UDim.new(0, 60)
+local outside = Layouts.SurfaceCurvedLine.GetCells(contained, Vector3.new(6, 8, 2), random(1))
+assert(
+	math.abs(outside[2].Frame.X) > contained.Size.X / 2 or math.abs(outside[2].Frame.Z) > contained.Size.Z / 2,
+	"the curve must be allowed to travel outside the area between its endpoints"
+)
+contained.Attributes.Layout_PopulationLimit = NumberRange.new(1)
+local midpoint = Layouts.SurfaceCurvedLine.GetCells(contained, Vector3.new(6, 8, 2), random(1))
+assertArcSpacing(contained, midpoint)
+assert(
+	math.abs(midpoint[1].Frame.X) > contained.Size.X / 2 or math.abs(midpoint[1].Frame.Z) > contained.Size.Z / 2,
+	"a lone midpoint is not a curve endpoint and must follow the unbounded curve"
+)
+
+-- Endpoint geometry checks account for random yaw and pivots without constraining other copies.
+contained.Attributes.Layout_PopulationLimit = NumberRange.new(30)
+local originalPivotOffset = template.PivotOffset
+local originalSourcePivotMethod = contained.Attributes.Source_PivotMethod
+template.PivotOffset = CFrame.new(3, 0, -2) * CFrame.Angles(0, math.rad(30), 0)
+template:SetAttribute("PivotOffset", CFrame.new(20, 0, -20) * CFrame.Angles(0, math.rad(60), 0))
+contained.Attributes.Source_PivotMethod = "Pivot"
+contained.Attributes.Random_Pan = NumberRange.new(-180, 180)
+contained.Attributes.Random_Scale = NumberRange.new(0.75, 1.5)
+contained.Attributes.Source_ScaleMethod = "Fit"
+for _, seed in { 1, 2026 } do
+	contained.Attributes.Random_Seed = seed
+	local output = roblox.Instance.new("Folder")
+	definition.OnGenerate(contained, output)
+	assert(#output:GetChildren() == 30, "containment must preserve forced populations")
+	local copies = output:GetChildren() :: { RInstance }
+	assertWithinSurface(copies[1].CFrame, copies[1].Size, contained.Size)
+	assertWithinSurface(copies[#copies].CFrame, copies[#copies].Size, contained.Size)
+	local intermediateOutside = false
+	for index = 2, #copies - 1 do
+		local frame, size = GeometryUtil.getBounds(copies[index])
+		if
+			math.abs(frame.X) + size.X / 2 > contained.Size.X / 2
+			or math.abs(frame.Z) + size.Z / 2 > contained.Size.Z / 2
+		then
+			intermediateOutside = true
+		end
+	end
+	assert(intermediateOutside, "placement must not constrain the intermediate geometry")
+	output:Destroy()
+end
+template.PivotOffset = originalPivotOffset
+template:SetAttribute("PivotOffset", nil)
+contained.Attributes.Source_PivotMethod = originalSourcePivotMethod
+
 for _, name in { "Layout_CurveSize0", "Layout_CurveSize1" } do
 	local valid = attributes[name]
 	for _, invalid in { 12, "0.5, 12", UDim.new(0 / 0, 0), UDim.new(math.huge, 0) } do

@@ -32,9 +32,13 @@ function Util.grid(parameters: Types.Parameters, columns: number, rows: number, 
 	end
 	local size = parameters.Size
 	local cellSize = naturalSize or size / Vector3.new(columns, 1, rows)
-	-- Center each fixed footprint in an equal share of the area.
-	-- Count limits change spacing, producing gaps or overlaps without resizing cells.
-	local step = Vector3.new(size.X / columns, 0, size.Z / rows)
+	-- Keep the outer footprints flush with the area, distributing gaps or overlap inside.
+	-- A single cell or an oversized footprint stays centered on that axis.
+	local step = Vector3.new(
+		if columns > 1 then math.max(size.X - cellSize.X, 0) / (columns - 1) else 0,
+		0,
+		if rows > 1 then math.max(size.Z - cellSize.Z, 0) / (rows - 1) else 0
+	)
 	local first = -step * Vector3.new(columns - 1, 0, rows - 1) / 2
 	local cells: { Types.Cell } = {}
 	for row = 0, rows - 1 do

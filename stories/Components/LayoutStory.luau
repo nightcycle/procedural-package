@@ -34,10 +34,13 @@ function LayoutStory.create(
 		controls.TemplateHeight = UILabs.Slider(8, 1, 20, 0.5)
 		controls.TemplateDepth = UILabs.Slider(4, 1, 20, 0.5)
 		controls.Source_Padding = UILabs.Slider(0.1, 0, 0.4, 0.01)
-	elseif kind ~= "Single" then
+	elseif kind == "SurfaceRandom" then
 		controls.Population = UILabs.Slider(12, 0, 60, 1)
 	end
 	if kind == "SurfaceCurvedLine" then
+		controls.PopulationMin = UILabs.Slider(1, 0, 100, 1)
+		controls.PopulationMax = UILabs.Slider(60, 0, 100, 1)
+		controls.Source_Padding = UILabs.Slider(0.05, 0, 0.4, 0.01)
 		controls.CurveSize0Scale = UILabs.Slider(0, -2, 2, 0.05)
 		controls.CurveSize0Offset = UILabs.Slider(12, -40, 40, 1)
 		controls.CurveSize1Scale = UILabs.Slider(0, -2, 2, 0.05)
@@ -70,10 +73,15 @@ function LayoutStory.create(
 					Controls.number(values, "TemplateHeight"),
 					Controls.number(values, "TemplateDepth")
 				)
-			elseif kind ~= "Single" then
+			elseif kind == "SurfaceRandom" then
 				parameters.Attributes.Layout_PopulationLimit = NumberRange.new(Controls.number(values, "Population"))
 			end
 			if kind == "SurfaceCurvedLine" then
+				local minimum, maximum =
+					Controls.number(values, "PopulationMin"), Controls.number(values, "PopulationMax")
+				parameters.Attributes.Layout_PopulationLimit =
+					NumberRange.new(math.min(minimum, maximum), math.max(minimum, maximum))
+				parameters.Attributes.Source_Padding = UDim.new(Controls.number(values, "Source_Padding"), 0)
 				parameters.Attributes.Layout_CurveSize0 =
 					UDim.new(Controls.number(values, "CurveSize0Scale"), Controls.number(values, "CurveSize0Offset"))
 				parameters.Attributes.Layout_CurveSize1 =
@@ -109,13 +117,13 @@ function LayoutStory.create(
 			scene.SetStatus(
 				`{#cells} cells · scaled footprint {sourceSize.X} × {sourceSize.Z} · {pauses} pause calls\n{if kind
 						== "SurfaceCurvedLine"
-					then "Front-left → back-right. Gold = signed front / right handles; green = backend samples."
+					then "Only endpoints are inset by rotated scaled bounds; the curve may travel outside X/Z. Gold = handles."
 					elseif
 						kind == "SurfaceRandom"
 					then "Offsets use normalized free cell space; the placement pipeline subtracts fitted source dimensions."
 					elseif
 						kind == "SurfaceGrid"
-					then "Centers use area / count spacing; fixed footprints have gaps or overlaps."
+					then "Outer padded footprints align with the area edges; gaps or overlaps stay between cells."
 					else "Every cell is returned directly by the production layout module."}`
 			)
 		end

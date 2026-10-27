@@ -7,6 +7,12 @@ local GeometryUtil = require(script.Parent.GeometryUtil)
 local DebugUtil = require(script.Parent.DebugUtil)
 local Util = {}
 
+local function containSurfaceOrigin(instance: Types.Template, origin: CFrame, areaSize: Vector3): CFrame
+	instance:PivotTo(origin)
+	local frame, size = GeometryUtil.getBounds(instance)
+	return origin + GeometryUtil.clampSurfaceCenter(frame.Position, size, areaSize) - frame.Position
+end
+
 -- Layouts own cell positions; this shared pipeline owns source transforms and output.
 function Util.run(
 	parameters: Types.Parameters,
@@ -24,6 +30,9 @@ function Util.run(
 			scoped:Pause()
 		end
 		local cell = cells[index]
+		local isCurveEndpoint = attributes.Layout_Type == "SurfaceCurvedLine"
+			and #cells > 1
+			and (index == 1 or index == #cells)
 		local rotation = cell.Frame.Rotation
 			* CFrame.Angles(
 				math.rad(random:NextNumber(attributes.Random_Roll.Min, attributes.Random_Roll.Max)),
@@ -44,6 +53,9 @@ function Util.run(
 			center = Vector3.new(center.X, -parameters.Size.Y / 2, center.Z)
 		end
 		local initialOrigin = CFrame.new(center) * instance:GetPivot().Rotation
+		if isCurveEndpoint then
+			initialOrigin = containSurfaceOrigin(instance, initialOrigin, parameters.Size)
+		end
 		local origin = if attributes.Layout_Type == "Single"
 			then initialOrigin
 			else SurfaceUtil.detect(
@@ -62,6 +74,9 @@ function Util.run(
 		local offset = copy.Template:GetAttribute("PivotOffset")
 		if typeof(offset) == "CFrame" then
 			origin *= offset
+		end
+		if isCurveEndpoint then
+			origin = containSurfaceOrigin(instance, origin, parameters.Size)
 		end
 		instance:PivotTo(origin)
 		if callback then

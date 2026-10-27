@@ -9,7 +9,7 @@ local Util = require(script.Parent)
 
 return Story.create(
 	"Grid math · Clamp / spacing / pause",
-	"Inspect clampDimension and grid. Centers use area / count spacing; fixed footprints have gaps or overlap. Turn off NaturalFootprint to partition the area.",
+	"Inspect clampDimension and grid. Outer footprints align with the area edges; gaps or overlap stay between cells. Turn off NaturalFootprint to partition the area.",
 	{
 		ProposedColumns = UILabs.Slider(5.8, 0, 12, 0.1),
 		Minimum = UILabs.Slider(2, 0, 8, 1),
