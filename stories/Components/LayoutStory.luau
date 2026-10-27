@@ -5,9 +5,14 @@ local Story = require(script.Parent.Story)
 local Controls = require(script.Parent.Controls)
 local Preview = require(script.Parent.Preview)
 local Fixtures = require(script.Parent.Fixtures)
+local Viewport = require(script.Parent.Viewport)
 local LayoutStory = {}
 
-function LayoutStory.create(kind: Types.LayoutType, layout: Types.Layout): UILabs.GenericStory
+function LayoutStory.create(
+	kind: Types.LayoutType,
+	layout: Types.Layout,
+	drawGuides: ((Viewport.Scene, Types.Parameters) -> ())?
+): UILabs.GenericStory
 	local controls: { [string]: unknown } = {
 		Width = UILabs.Slider(40, 5, 80, 1),
 		Depth = UILabs.Slider(30, 5, 60, 1),
@@ -72,20 +77,13 @@ function LayoutStory.create(kind: Types.LayoutType, layout: Types.Layout): UILab
 				end
 				previous = position
 			end
-			if kind == "SurfaceCurvedLine" then
-				local halfSpan = parameters.Size.X * (1 - 1 / math.max(#cells, 1)) / 2
-				local start, finish = Vector3.new(-halfSpan, 0, 0), Vector3.new(halfSpan, 0, 0)
-				local handle0 = start + Vector3.zAxis * parameters.Attributes.Layout_CurveSize0
-				local handle1 = finish + Vector3.zAxis * parameters.Attributes.Layout_CurveSize1
-				scene.Line(start, handle0, Fixtures.Gold, 0.2)
-				scene.Line(finish, handle1, Fixtures.Gold, 0.2)
-				scene.Marker(CFrame.new(handle0), 1.3)
-				scene.Marker(CFrame.new(handle1), 1.3)
+			if drawGuides then
+				drawGuides(scene, parameters)
 			end
 			scene.SetStatus(
 				`{#cells} cells · template footprint {templateSize.X} × {templateSize.Z} · {pauses} pause calls\n{if kind
 						== "SurfaceCurvedLine"
-					then "Gold lines = signed Beam handles; green line joins actual backend samples."
+					then "Front-left → back-right. Gold = signed front / right handles; green = backend samples."
 					elseif
 						kind == "SurfaceRandom"
 					then "Offsets use normalized free cell space; the placement pipeline subtracts fitted source dimensions."

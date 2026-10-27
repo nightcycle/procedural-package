@@ -12,9 +12,23 @@ local function newGenerator(
 	callback: Types.CallbackFn<Types.PackageAttributes & Types.ExtraAttributes>?,
 	model: ProceduralModel?
 ): Types.GeneratorModuleDefinition<Types.PackageAttributes & Types.ExtraAttributes>
+	local selected: Types.LayoutType? = nil
+	if model then
+		local value = model:GetAttribute("Layout_Type")
+		if Types.LayoutType(value) then
+			selected = value :: Types.LayoutType
+		end
+	end
+	local defaults = ParameterUtil.getDefaults(extraDefaults, selected)
+	local disconnect = if model then ParameterUtil.bindAttributes(model, defaults) else nil
 	return {
-		Attributes = ParameterUtil.getDefaults(extraDefaults),
-		OnGenerate = function(parameters: Types.Parameters, target: GeneratedFolder)
+		Attributes = defaults,
+		Destroy = disconnect,
+		OnGenerate = function(
+			input: Types.GenerationFunctionParams<Types.PackageAttributes & Types.ExtraAttributes>,
+			target: GeneratedFolder
+		)
+			local parameters = ParameterUtil.resolve(input)
 			local layout = ParameterUtil.validate(parameters)
 			if parameters.Attributes.Source_Path == "" then
 				warn("no Source_Path set")

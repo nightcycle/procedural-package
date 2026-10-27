@@ -169,11 +169,43 @@ attributes.Source_Alignment = "Floor"
 attributes.Layout_Type = "SurfaceCurvedLine"
 attributes.Layout_PopulationLimit = NumberRange.new(3)
 local cells = Layouts.SurfaceCurvedLine.GetCells(parameters, template.Size, random(1))
-assert(math.abs(cells[1].Frame.Z) < 0.001 and math.abs(cells[3].Frame.Z) < 0.001)
-assert(math.abs(cells[2].Frame.Z - 15) < 0.001, "cubic midpoint must be 3/8 of each handle")
+local frontLeft = Vector3.new(-parameters.Size.X / 2, 0, -parameters.Size.Z / 2)
+local backRight = -frontLeft
+assert((cells[1].Frame.Position - frontLeft).Magnitude < 0.001, "curve must start at the front-left corner")
+assert((cells[3].Frame.Position - backRight).Magnitude < 0.001, "curve must finish at the back-right corner")
+assert((cells[1].Frame.RightVector - Vector3.zAxis).Magnitude < 0.001, "curve must enter through the front")
+assert((cells[3].Frame.RightVector - Vector3.xAxis).Magnitude < 0.001, "curve must leave through the right")
+assert(
+	(cells[2].Frame.Position - Vector3.new(-7.5, 0, 7.5)).Magnitude < 0.001,
+	"cubic midpoint must use the signed perpendicular handles"
+)
 attributes.Layout_CurveSize0, attributes.Layout_CurveSize1 = -20, -20
 cells = Layouts.SurfaceCurvedLine.GetCells(parameters, template.Size, random(1))
-assert(math.abs(cells[2].Frame.Z + 15) < 0.001, "negative handles should reverse the curve")
+assert(
+	(cells[2].Frame.Position - Vector3.new(7.5, 0, -7.5)).Magnitude < 0.001,
+	"negative handles should reverse the bend"
+)
+attributes.Layout_CurveSize0, attributes.Layout_CurveSize1 = 0, 0
+cells = Layouts.SurfaceCurvedLine.GetCells(parameters, template.Size, random(1))
+local diagonal = (backRight - frontLeft).Unit
+assert(cells[2].Frame.Position.Magnitude < 0.001, "zero handles must form a straight diagonal")
+assert((cells[1].Frame.RightVector - diagonal).Magnitude < 0.001)
+assert((cells[3].Frame.RightVector - diagonal).Magnitude < 0.001)
+for _, dimensions in { Vector3.new(120, 24, 10), Vector3.new(10, 24, 120) } do
+	local previousSize = parameters.Size
+	parameters.Size = dimensions
+	for _, count in { 2, 5 } do
+		attributes.Layout_PopulationLimit = NumberRange.new(count)
+		cells = Layouts.SurfaceCurvedLine.GetCells(parameters, template.Size, random(1))
+		local corner = Vector3.new(-dimensions.X / 2, 0, -dimensions.Z / 2)
+		assert((cells[1].Frame.Position - corner).Magnitude < 0.001)
+		assert(
+			(cells[count].Frame.Position + corner).Magnitude < 0.001,
+			"resizing and population changes must preserve exact corner endpoints"
+		)
+	end
+	parameters.Size = previousSize
+end
 for _, count in { 0, 1 } do
 	attributes.Layout_PopulationLimit = NumberRange.new(count)
 	assert(#generate() == count)
@@ -227,6 +259,19 @@ assert(#generate() == 12, "natural grid dimensions were not clamped")
 
 -- Both surface modes discard misses before invoking callbacks and still pause.
 local owner = {
+	GetAttribute = function(_self: unknown, _name: string)
+		return nil
+	end,
+	AttributeChanged = {
+		Connect = function()
+			return { Disconnect = function() end }
+		end,
+	},
+	Destroying = {
+		Connect = function()
+			return { Disconnect = function() end }
+		end,
+	},
 	GetPivot = function(_self: unknown)
 		return CFrame.new(10, 0, 0)
 	end,

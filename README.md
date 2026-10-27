@@ -16,7 +16,11 @@ return Package.Generator.new(model)
 
 Set `Source_Path` to the full path of a BasePart, Model, or Folder. Folders select seeded random templates from eligible descendants. Models are treated as whole templates; their children are not independently selected. `Source_ExcludedTags` skips matching descendants and their subtrees. Commas separate tags.
 
-All layout attributes have defaults and remain available when switching `Layout_Type`. Only the selected layout's settings are validated and used. Source, random, and pause settings are shared across layouts.
+Only the selected layout's attributes appear on the ProceduralModel. Changing `Layout_Type` removes unrelated fields with `SetAttribute(name, nil)` and adds the new layout's fields. Previously edited layout values are cached for that model during the current generator session and restored when you switch back. Source, random, pause, and custom attributes are preserved.
+
+Pass the owning model to `Generator.new(model)` or `Generator.append(defaults, callback, model)` to keep the Properties panel synchronized. The constructor manages attribute changes outside `OnGenerate`; its optional `Destroy()` cleanup disconnects the binding, and destroying the model also disconnects it. Generators constructed without an owner still resolve missing layout fields internally but cannot edit a model's displayed attributes.
+
+When updating an already-open place, save and reopen it once if existing generators retain the old attribute list. Studio can keep previously required package exports cached even after their source changes; newly loaded generators use the new layout schema.
 
 ## Layouts
 
@@ -25,7 +29,7 @@ All layout attributes have defaults and remain available when switching `Layout_
 | `Single` (default) | One copy using the entire generation box as its cell. | None. |
 | `SurfaceGrid` | One X/Z layer of evenly spaced cells. | `Layout_ColumnLimit`, `Layout_RowLimit`: NumberRanges clamping the calculated integer dimensions. |
 | `SurfaceRandom` | Seeded, shuffled X/Z cells with random offsets inside each cell's free space. | `Layout_PopulationLimit`: NumberRange sampled as an integer count. |
-| `SurfaceCurvedLine` | Copies along a cubic Bézier curve across local X, rotated along its horizontal tangent. | `Layout_PopulationLimit`, `Layout_CurveSize0`, `Layout_CurveSize1`. |
+| `SurfaceCurvedLine` | Copies along a cubic Bézier curve from the front-left corner to the back-right corner, rotated along its horizontal tangent. | `Layout_PopulationLimit`, `Layout_CurveSize0`, `Layout_CurveSize1`. |
 
 `SurfaceGrid` calculates natural dimensions from the largest source footprint, including `Source_Padding`, then clamps them to the limits. Limits default to 1–100. Set both ends of a range to the same integer to fix a dimension, for example `NumberRange.new(4)` columns and `NumberRange.new(3)` rows produce 12 copies. Source overrides do not change the layout or its population.
 
@@ -33,9 +37,9 @@ Population limits default to 10 and may contain zero. A range must contain at le
 
 ### Curved line
 
-The endpoints are calculated from the area's width, inset by half a cell. `Layout_CurveSize0` and `Layout_CurveSize1` are signed handle lengths in studs, following [Beam's control point convention](https://create.roblox.com/docs/reference/engine/classes/Beam). No Vector3 control points or Attachments need to be positioned.
+The curve starts at the exact front-left corner `(-Size.X / 2, 0, -Size.Z / 2)` and ends at the exact back-right corner `(Size.X / 2, 0, Size.Z / 2)`. Front is local -Z and right is local +X. These endpoints follow both area dimensions and are independent of population. Copy origins lie on the corners; their geometry may extend beyond the area.
 
-The implicit start axis points along local +Z and the end axis along local -Z. Internally, `P1 = P0 + axis0 * CurveSize0` and `P2 = P3 - axis1 * CurveSize1`. Two positive lengths make an arch toward +Z; negative lengths reverse it, differing signs make an S curve, and zero lengths make a straight line. Both lengths default to 12. Large lengths can extend the curve outside the area.
+`Layout_CurveSize0` and `Layout_CurveSize1` remain signed handle lengths in studs, following [Beam's control point convention](https://create.roblox.com/docs/reference/engine/classes/Beam). The start tangent points inward from the front along +Z, and the end tangent points out through the right along +X. Internally, `P1 = P0 + Z * CurveSize0` and `P2 = P3 - X * CurveSize1`. Negative lengths reverse the corresponding handle, and zero lengths make a straight diagonal. Both lengths default to 12. Large lengths can extend the curve outside the area. No Vector3 control points or Attachments need to be positioned.
 
 Copies sample the curve at equal parameter intervals, including both endpoints. A population of one samples its midpoint. The curve follows the area's rotation and uses the shared alignment/surface rules for height.
 
@@ -131,11 +135,11 @@ This refactor adopts the renamed attributes; existing models and source override
 | `RandomPlacement` | `Layout_Type` (`Single`, `SurfaceGrid`, `SurfaceRandom`, `SurfaceCurvedLine`) |
 | `GeneratedCount` | Grid row/column limits, or population limits for Random/CurvedLine. `Single` always generates one copy. |
 
-The old `Line` mode becomes `SurfaceCurvedLine` with both curve sizes set to zero. Surface layouts always use one X/Z layer, including with Center alignment.
+The old `Line` mode is replaced by `SurfaceCurvedLine`; setting both curve sizes to zero produces a straight corner-to-corner diagonal. Surface layouts always use one X/Z layer, including with Center alignment.
 
 ## Modules and checks
 
-Each module under `src/Layouts` owns its parameter schema and cell calculations. `Layouts/Util` shares cell construction, counts, and pauses; `Layouts/init` is the dispatch registry. `ParameterSchema` contains validation helpers, while `ParameterUtil` combines schemas, supplies defaults, validates active settings, and resolves source overrides. `PlacementUtil` handles transforms, surface detection, callbacks, and output for all layouts.
+Each module under `src/Layouts` owns its parameter schema and cell calculations. `Layouts/Util` shares cell construction, counts, and pauses; `Layouts/init` is the dispatch registry. `ParameterSchema` contains validation helpers, while `ParameterUtil` supplies active defaults, binds visible model attributes, resolves complete internal snapshots, validates settings, and resolves source overrides. Public `PackageAttributes` marks layout-specific fields optional; `ResolvedPackageAttributes` and `Parameters` describe the complete internal snapshot. `PlacementUtil` handles transforms, surface detection, callbacks, and output for all layouts.
 
 To add a layout, define its typed attributes and a module with `Parameters` and `GetCells`, then register it in `Layouts/init` and `Types.LayoutType`. Layout defaults and validation flow through the registry without changes to Generator.
 
@@ -143,6 +147,7 @@ The demo contains exactly four ProceduralModels under `Workspace.examples`, one 
 
 ```sh
 lune run scripts/check-layouts.luau
+lune run scripts/check-parameters.luau
 lune run scripts/build-demo.luau
 rojo build demo.project.json --output demo.rbxl
 ```
@@ -173,6 +178,7 @@ Each story renders isolated geometry in a `ViewportFrame` with a camera and `Wor
 | `SourceUtil/Fitting.story` | Stretch/Fit/Fill, four scale references, padding, source scale, and random scale. |
 | `SourceUtil/Selection.story` | Folder candidates, excluded tag subtrees, and seeded source selection. |
 | `ParameterUtil/Overrides.story` | Template overrides, custom attributes, and area-owned layout settings. |
+| `ParameterUtil/LayoutAttributes.story` | The exact visible attribute schema for each selected layout. |
 | `ParameterSchema/Ranges.story` | General/scale/population/grid range boundaries. |
 | `Layouts/Single/Layout.story` | The full-area cell. |
 | `Layouts/SurfaceGrid/Layout.story` | Natural grid dimensions, limits, padding, and source footprints. |

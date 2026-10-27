@@ -84,8 +84,17 @@ export type SurfaceCurvedLineLayoutAttributes = SurfaceRandomLayoutAttributes & 
 	Layout_CurveSize0: number,
 	Layout_CurveSize1: number,
 }
--- Keep every layout field available so Layout_Type can change without a new constructor.
-export type PackageAttributes =
+-- Public model attributes contain only the fields owned by the selected layout.
+export type PackageAttributes = BaseSourceAttributes & BaseRandomAttributes & BaseLayoutAttributes & {
+	Layout_SurfaceDetectionMethod: SurfaceDetectionMethod?,
+	Layout_ColumnLimit: NumberRange?,
+	Layout_RowLimit: NumberRange?,
+	Layout_PopulationLimit: NumberRange?,
+	Layout_CurveSize0: number?,
+	Layout_CurveSize1: number?,
+}
+-- Internal math receives a complete snapshot, without adding hidden fields to the model.
+export type ResolvedPackageAttributes =
 	BaseSourceAttributes
 	& BaseRandomAttributes
 	& SurfaceGridLayoutAttributes
@@ -95,12 +104,13 @@ export type GenerationFunctionParams<Attributes> = {
 	Size: Vector3,
 	Pause: (self: GenerationFunctionParams<Attributes>) -> (),
 }
-export type Parameters = GenerationFunctionParams<PackageAttributes & ExtraAttributes>
+export type Parameters = GenerationFunctionParams<ResolvedPackageAttributes & ExtraAttributes>
 export type CallbackFn<Attributes> = (Template, GenerationFunctionParams<Attributes>, GeneratedFolder) -> ()
 export type TemplateGroup = { Template: Template, Parameters: Parameters }
 export type GeneratorModuleDefinition<Attributes> = {
 	Attributes: Attributes,
 	OnGenerate: (GenerationFunctionParams<Attributes>, GeneratedFolder) -> (),
+	Destroy: (() -> ())?,
 }
 export type ParameterDefinition = {
 	Default: () -> unknown,

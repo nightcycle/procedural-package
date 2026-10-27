@@ -23,7 +23,7 @@ function Preview.parameters(overrides: Types.ExtraAttributes?): Types.Parameters
 			attributes[key] = value
 		end
 	end
-	return { Attributes = attributes, Size = Vector3.new(40, 16, 30), Pause = function(_self: Types.Parameters) end }
+	return ParameterUtil.resolve({ Attributes = attributes, Size = Vector3.new(40, 16, 30), Pause = function() end })
 end
 
 function Preview.showCells(scene: Viewport.Scene, cells: { Types.Cell }, fullSize: Vector3)

@@ -37,17 +37,22 @@ for index, layout in layouts do
 	instance.Size = Vector3.new(72, 36, 56)
 	instance.WorldPivotData = CFrame.new((index - 2.5) * 100, 20, 0)
 	instance.NeedsPivotMigration = false
-	local attributes = ParameterUtil.getDefaults(nil)
+	local attributes = ParameterUtil.getDefaults(nil, layout)
 	attributes.Source_Path = sourcePath
 	attributes.Source_PivotMethod = "Bottom"
 	attributes.Source_ScaleMethod = "Fit"
 	attributes.Source_Padding = UDim.new(0.05, 0)
 	attributes.Layout_Type = layout
-	attributes.Layout_ColumnLimit = NumberRange.new(4)
-	attributes.Layout_RowLimit = NumberRange.new(3)
-	attributes.Layout_PopulationLimit = NumberRange.new(12)
-	attributes.Layout_CurveSize0 = 30
-	attributes.Layout_CurveSize1 = 30
+	if layout == "SurfaceGrid" then
+		attributes.Layout_ColumnLimit = NumberRange.new(4)
+		attributes.Layout_RowLimit = NumberRange.new(3)
+	elseif layout == "SurfaceRandom" or layout == "SurfaceCurvedLine" then
+		attributes.Layout_PopulationLimit = NumberRange.new(12)
+	end
+	if layout == "SurfaceCurvedLine" then
+		attributes.Layout_CurveSize0 = 30
+		attributes.Layout_CurveSize1 = 30
+	end
 	attributes.Random_Seed = 2026
 	local settings: { [string]: string } = {}
 	for key, value in attributes do
@@ -81,6 +86,15 @@ for _, child in saved:GetChildren() do
 	assert(instance.Generator and instance.Generator.Parent == instance)
 	assert(instance.Name == instance:GetAttribute("Layout_Type"))
 	assert(instance:GetAttribute("Source_Path") == sourcePath)
+	if instance.Name ~= "SurfaceCurvedLine" then
+		assert(instance:GetAttribute("Layout_CurveSize0") == nil and instance:GetAttribute("Layout_CurveSize1") == nil)
+	end
+	if instance.Name ~= "SurfaceGrid" then
+		assert(instance:GetAttribute("Layout_ColumnLimit") == nil and instance:GetAttribute("Layout_RowLimit") == nil)
+	end
+	if instance.Name == "Single" or instance.Name == "SurfaceGrid" then
+		assert(instance:GetAttribute("Layout_PopulationLimit") == nil)
+	end
 end
 fs.writeFile("demo/workspace/examples.rbxm", bytes)
 fs.writeFile("demo/lib.rbxm", roblox.serializeModel({ library }))

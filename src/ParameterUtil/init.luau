@@ -81,9 +81,18 @@ local function validate(schema: Types.ParameterSchema, attributes: Types.ExtraAt
 	end
 end
 
-function Util.getDefaults(extraAttributes: Types.ExtraAttributes?): Types.PackageAttributes & Types.ExtraAttributes
+function Util.getDefaults(
+	extraAttributes: Types.ExtraAttributes?,
+	layoutType: Types.LayoutType?
+): Types.PackageAttributes & Types.ExtraAttributes
 	local defaults: Types.ExtraAttributes = {}
-	for name, definition in all do
+	for name, definition in common do
+		defaults[name] = definition.Default()
+	end
+	local selected: Types.LayoutType = layoutType or ENV.DEFAULT_LAYOUT_TYPE
+	assert(Types.LayoutType(selected), `invalid Layout_Type: {selected}`)
+	defaults.Layout_Type = selected
+	for name, definition in Layouts[selected].Parameters do
 		defaults[name] = definition.Default()
 	end
 	if extraAttributes then
@@ -94,6 +103,98 @@ function Util.getDefaults(extraAttributes: Types.ExtraAttributes?): Types.Packag
 	end
 	-- The schema is the single runtime boundary for attribute dictionaries.
 	return defaults :: any
+end
+
+function Util.resolve(
+	parameters: Types.GenerationFunctionParams<Types.PackageAttributes & Types.ExtraAttributes>
+): Types.Parameters
+	local resolved = table.clone(parameters.Attributes)
+	for name, definition in all do
+		if resolved[name] == nil then
+			resolved[name] = definition.Default()
+		end
+	end
+	return {
+		Attributes = resolved :: any,
+		Size = parameters.Size,
+		Pause = function(_self: Types.Parameters)
+			parameters:Pause()
+		end,
+	}
+end
+
+-- Attribute editing runs from the constructor/listener, never inside OnGenerate.
+local bindings: { [ProceduralModel]: () -> () } = setmetatable({}, { __mode = "k" }) :: any
+
+function Util.bindAttributes(
+	model: ProceduralModel,
+	defaults: Types.PackageAttributes & Types.ExtraAttributes
+): () -> ()
+	local previous = bindings[model]
+	if previous then
+		previous()
+	end
+	local cached: Types.ExtraAttributes = {}
+	local connections: { RBXScriptConnection } = {}
+	local syncing, alive = false, true
+	local function sync()
+		if syncing or not alive then
+			return
+		end
+		local selected = model:GetAttribute("Layout_Type") or defaults.Layout_Type
+		if not Types.LayoutType(selected) then
+			return
+		end
+		local schema = Layouts[selected :: Types.LayoutType].Parameters
+		syncing = true
+		for name in all do
+			if common[name] then
+				continue
+			end
+			local value = model:GetAttribute(name)
+			if value ~= nil then
+				cached[name] = value
+			end
+			if schema[name] == nil then
+				defaults[name] = nil
+				if value ~= nil then
+					model:SetAttribute(name, nil)
+				end
+			end
+		end
+		for name, definition in schema do
+			defaults[name] = definition.Default()
+			if model:GetAttribute(name) == nil then
+				model:SetAttribute(name, if cached[name] ~= nil then cached[name] else definition.Default())
+			end
+		end
+		syncing = false
+	end
+	local function disconnect()
+		if not alive then
+			return
+		end
+		alive = false
+		for _, connection in connections do
+			connection:Disconnect()
+		end
+		if bindings[model] == disconnect then
+			bindings[model] = nil
+		end
+	end
+	bindings[model] = disconnect
+	table.insert(
+		connections,
+		model.AttributeChanged:Connect(function(name: string)
+			-- Also remove an inactive field if an older generation/default snapshot re-adds it.
+			if name == "Layout_Type" or (all[name] ~= nil and common[name] == nil) then
+				sync()
+			end
+		end)
+	)
+	table.insert(connections, model.Destroying:Connect(disconnect))
+	sync()
+	return disconnect
 end
 
 function Util.validate(parameters: Types.Parameters): Types.Layout

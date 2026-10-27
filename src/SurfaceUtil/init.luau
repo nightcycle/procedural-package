@@ -10,7 +10,7 @@ local Util = {}
 function Util.detect(
 	instance: Types.Template,
 	origin: CFrame,
-	attributes: Types.PackageAttributes,
+	attributes: Types.ResolvedPackageAttributes,
 	cellCenter: Vector3,
 	cellSize: Vector3,
 	fullSize: Vector3,
