@@ -49,6 +49,8 @@ template.Name = "Template"
 template.Size = Vector3.new(4, 6, 4)
 template.Parent = source
 local queryHit = true
+local solverModule: any = nil
+local solverLookups = 0
 local world = {
 	HasTag = function(_self: unknown, _tag: string): boolean
 		return false
@@ -813,6 +815,108 @@ for _, mode in { "Raycast", "Shapecast" } do
 	surfaceGenerator.OnGenerate(parameters, target)
 	assert(#target:GetChildren() == 12, `hits were dropped by {mode}`)
 end
+-- Custom modules receive the owner, scoped parameters, output, and world-space geometry.
+template:SetAttribute("Tint", Color3.new(0, 1, 0))
+local CastSolver = load("src/CastSolver")
+local customSolver = table.clone(CastSolver)
+local customCalls = 0
+local customHit = true
+local currentTarget: RInstance? = nil
+customSolver.raycast = function(
+	model: unknown,
+	scoped: any,
+	target: RInstance,
+	castingInternally: boolean,
+	start: Vector3,
+	direction: Vector3
+)
+	assert(castingInternally == false)
+	assert(model == owner and target == currentTarget)
+	assert(scoped.Attributes.Solver_Cast_Path == "custom/casts")
+	assert(scoped.Attributes.Tint == template:GetAttribute("Tint"))
+	assert(scoped.Size == parameters.Size)
+	assert(math.abs(start.Y - (parameters.Size.Y + 0.0002)) < 1e-5)
+	assert(math.abs(direction.Y + (parameters.Size.Y + 0.0002) * 2) < 1e-5)
+	customCalls += 1
+	return if customHit then { Position = start + direction / 2 } else nil
+end
+customSolver.shapecast = function(
+	model: unknown,
+	scoped: any,
+	target: RInstance,
+	castingInternally: boolean,
+	part: RInstance,
+	direction: Vector3,
+	frame: CFrame,
+	size: Vector3
+)
+	assert(castingInternally == false)
+	assert(model == owner and target == currentTarget)
+	assert(scoped.Attributes.Solver_Cast_Path == "custom/casts")
+	assert(size == part.Size * 2 and typeof(frame) == "CFrame")
+	customCalls += 1
+	return if customHit then { Distance = direction.Magnitude / 2 } else nil
+end
+solverModule = {
+	ModulePath = "checks/custom-solver",
+	IsA = function(_self: unknown, className: string): boolean
+		return className == "ModuleScript"
+	end,
+}
+-- The loader uses the same dynamic require boundary as a ModuleScript in Studio.
+local customLoad = makeLoader({ Random = { new = random }, workspace = world }, {
+	IndexUtil = {
+		waitForPath = function(path: string, timeout: number, delimiter: string)
+			if path == "custom/casts" then
+				solverLookups += 1
+				assert(timeout == 0 and delimiter == "/")
+				return solverModule
+			end
+			return source
+		end,
+	},
+	["checks/custom-solver"] = customSolver,
+})
+local customGenerator = customLoad("src/Generator").append({ Tint = Color3.new(1, 0, 0) }, function() end, owner)
+attributes.Solver_Cast_Path = "custom/casts"
+attributes.Source_PathDelimiter = "/"
+attributes.Source_MaxYield = 0
+queryHit = false
+for _, mode in { "Raycast", "Shapecast" } do
+	attributes.Layout_SurfaceDetectionMethod = mode
+	local target = roblox.Instance.new("Folder") :: RInstance
+	currentTarget = target
+	local before = solverLookups
+	customGenerator.OnGenerate(parameters, target)
+	assert(#target:GetChildren() == 12 and solverLookups == before + 1)
+	target:Destroy()
+end
+assert(customCalls == 24, "custom casts were not routed to the selected solver")
+customHit = false
+queryHit = true
+for _, mode in { "Raycast", "Shapecast" } do
+	attributes.Layout_SurfaceDetectionMethod = mode
+	local target = roblox.Instance.new("Folder") :: RInstance
+	currentTarget = target
+	customGenerator.OnGenerate(parameters, target)
+	assert(#target:GetChildren() == 0, "custom solver misses fell back to workspace")
+	target:Destroy()
+end
+attributes.Solver_Cast_Path = "missing-but-unused"
+local before = solverLookups
+for _, kind in { "Single", "SurfaceGrid" } do
+	attributes.Layout_Type = kind
+	attributes.Layout_SurfaceDetectionMethod = "None"
+	local target = roblox.Instance.new("Folder")
+	customGenerator.OnGenerate(parameters, target)
+	assert(#target:GetChildren() == (if kind == "Single" then 1 else 12))
+	target:Destroy()
+end
+assert(solverLookups == before, "disabled surface detection resolved the solver")
+attributes.Solver_Cast_Path = ""
+attributes.Source_PathDelimiter = "."
+attributes.Source_MaxYield = 15
+queryHit = true
 ParameterUtil.validate(parameters)
 print(
 	"Verified all four layouts, post-scaling bounds, count-independent fitting, random scale and mixed-source bounds, fixed grid footprints, resizing, gaps/overlap, X/Z surface padding, swaps, deterministic transforms, Beam handles, callbacks, overrides, validation, zero/one populations, cooperative pauses, and surface hit/miss paths."

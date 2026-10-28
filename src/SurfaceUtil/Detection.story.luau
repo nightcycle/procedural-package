@@ -8,11 +8,12 @@ local Fixtures = require(Components.Fixtures)
 local Preview = require(Components.Preview)
 local Types = require(script.Parent.Parent.Types)
 local Surface = require(script.Parent)
+local CastSolver = require(script.Parent.Parent.CastSolver)
 local methods: { Types.SurfaceDetectionMethod } = { "Raycast", "Shapecast", "None" }
 
 return Story.create(
 	"Surface attributes · WorldModel casts",
-	"Production detect queries this viewport's WorldModel. The workspace and shared ENV filters are untouched.",
+	"Production detect uses a CastSolver bound to this viewport's WorldModel and private filters.",
 	{
 		Layout_SurfaceDetectionMethod = UILabs.Choose(methods),
 		HitSurface = true,
@@ -52,16 +53,17 @@ return Story.create(
 		local params = RaycastParams.new()
 		params.FilterType = Enum.RaycastFilterType.Include
 		params.FilterDescendantsInstances = { support }
+		local target = Instance.new("Folder")
+		scene.Keep(target)
 		local solved = Surface.detect(
 			copy,
 			origin,
-			parameters.Attributes,
+			parameters,
 			Vector3.zero,
 			localSize,
-			localSize,
+			target :: any,
 			owner,
-			scene.World,
-			params
+			CastSolver.new(scene.World, params)
 		)
 		local result = solved or origin
 		copy.Size *= scale

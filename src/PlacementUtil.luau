@@ -23,6 +23,12 @@ function Util.run(
 	callback: Types.CallbackFn<Types.PackageAttributes & Types.ExtraAttributes>?,
 	model: ProceduralModel?
 )
+	local areaAttributes = parameters.Attributes
+	local solver = if #copies > 0
+			and areaAttributes.Layout_Type ~= "Single"
+			and areaAttributes.Layout_SurfaceDetectionMethod ~= "None"
+		then SurfaceUtil.getSolver(parameters)
+		else nil
 	for index, copy in copies do
 		local scoped = copy.Parameters
 		local attributes = scoped.Attributes
@@ -61,11 +67,12 @@ function Util.run(
 			else SurfaceUtil.detect(
 				instance,
 				initialOrigin,
-				attributes,
+				scoped,
 				cell.Frame.Position,
 				cell.Size,
-				parameters.Size,
-				model
+				target,
+				model,
+				solver
 			)
 		if not origin then
 			instance:Destroy()

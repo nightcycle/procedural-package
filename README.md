@@ -62,6 +62,7 @@ Copies sample approximately equal arc distances along the reference curve, then 
 | `Source_Padding` | `UDim.new(0.1, 0)` | Surface layouts only: insets X/Z before fitting and reserves space around grid footprints. Removed and ignored by Single. Scale must be in [0, 0.5), Offset nonnegative. |
 | `Source_Alignment` | `"Floor"` | Place the selected origin on the area's floor, or use `"Center"` for the cell center. |
 | `Source_ExcludedTags` | `""` | Comma-separated tags excluded during folder selection. |
+| `Solver_Cast_Path` | `""` | ModuleScript implementing `Types.CastSolver`; empty uses the package's default solver. Uses `Source_PathDelimiter` and `Source_MaxYield` to resolve the path. |
 | `Random_Seed` | `0` | Reproducible generation seed. |
 | `Random_Scale` | `NumberRange.new(1)` | Finite positive uniform scale multiplier. |
 | `Random_Roll`, `Random_Pan`, `Random_Tilt` | `NumberRange.new(0)` | Random X/Y/Z rotation ranges in degrees. |
@@ -91,16 +92,28 @@ Pass the owning ProceduralModel to `Generator.new(model)` or `Generator.append(d
 
 Casts follow the area's local downward axis. `Floor` searches from the area ceiling to its floor; `Center` searches through the assigned cell. The source's `PivotOffset` attribute is applied afterward.
 
-Both modes use `Package.ENV.RAYCAST_PARAMS`, initially `RaycastParams.new()`:
+All surface queries go through `Package.CastSolver`, which implements the seven methods in `Types.CastSolver`. Every method starts with `(proceduralModel, parameters, targetGeneratedFolder, castingInternally, ...)`, followed by its world-space geometry arguments. `castingInternally` is a required boolean: `true` restricts the default solver to the current GeneratedFolder; `false` excludes the owning ProceduralModel and the current GeneratedFolder when querying surrounding geometry. Surface detection passes `false`, including to custom solvers. Each call receives the selected template's resolved parameters. Cast methods return `RaycastResult?`; overlap methods return `{ BasePart }` (`getPartBoundsInPart` wraps Roblox's `GetPartsInPart`).
+
+Set `Solver_Cast_Path` to a ModuleScript implementing the complete solver interface to replace the default for that generation area. It is validated and resolved once per generation when surface detection is active. Templates cannot override this attribute. Custom solvers own their query filters and may delegate methods to the default solver.
+
+To configure filters, create a solver ModuleScript such as `ReplicatedStorage.Solvers.MapCasts`:
 
 ```luau
+--!strict
+local Root = game.ReplicatedStorage.Packages.ProceduralPackage
+local Package = require(Root)
+local Types = require(Root.Types)
 local params = RaycastParams.new()
-params.IncludeInstances = { workspace.Map }
+params.FilterType = Enum.RaycastFilterType.Include
+params.FilterDescendantsInstances = { workspace.Map }
 params.IgnoreWater = true
-Package.ENV.RAYCAST_PARAMS = params
+local solver: Types.CastSolver = Package.CastSolver.new(workspace, params)
+return solver
 ```
 
-Exclude generated output from the query filters. Regenerate after surrounding surfaces change; those changes do not automatically regenerate ProceduralModels.
+Then set the area's `Solver_Cast_Path` to `"ReplicatedStorage.Solvers.MapCasts"`. `CastSolver.new(worldRoot, raycastParams?, overlapParams?)` binds a solver to a WorldRoot and optional query settings. External queries use explicit query settings as supplied, so exclude generated output when configuring them. Internal queries create fresh settings restricted to the target GeneratedFolder, preserving configured collision, water, and overlap options without changing the supplied settings. `ENV.RAYCAST_PARAMS` has been removed; move its settings into a solver module. The default solver path is configurable with `ENV.DEFAULT_SOLVER_CAST_PATH`.
+
+Regenerate after surrounding surfaces change; those changes do not automatically regenerate ProceduralModels.
 
 ## Custom callbacks
 
@@ -154,6 +167,7 @@ The demo contains exactly four ProceduralModels under `Workspace.examples`, one 
 ```sh
 lune run scripts/check-layouts.luau
 lune run scripts/check-parameters.luau
+lune run scripts/check-cast-solver.luau
 lune run scripts/build-demo.luau
 rojo build demo.project.json --output demo.rbxl
 ```
@@ -197,6 +211,6 @@ Each story renders isolated geometry in a `ViewportFrame` with a camera and `Wor
 
 Stories testing a single module live under that module beside its `init.luau`; the ModuleScript name and existing require paths remain the same. Stories covering several modules live in `stories/Attributes`. All custom UI components and shared story helpers are together in **`stories/Components`**. Story files and support components are excluded from the published Wally package.
 
-The surface story passes its private `WorldModel` and `RaycastParams` through the optional final arguments to `SurfaceUtil.detect`. Normal generation continues using `workspace` and `ENV.RAYCAST_PARAMS`; mounting a story does not change shared query settings or add support fixtures to Workspace.
+The surface story passes a solver created with `CastSolver.new(privateWorldModel, privateRaycastParams)` to `SurfaceUtil.detect`. Normal generation resolves the area's `Solver_Cast_Path` or uses the default workspace solver; mounting a story does not change shared query settings or add support fixtures to Workspace.
 
 Run `lune run scripts/check-stories.luau` to mount the actual UI Labs story definitions, update controls, inspect readouts, and verify unmount cleanup. The harness adapts engine signals, Model methods, queries, and RNG for Lune; verify final appearance and cast contacts in Studio.

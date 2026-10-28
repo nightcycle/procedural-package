@@ -42,6 +42,7 @@ local values: { [string]: any } = {
 	Layout_PopulationLimit = NumberRange.new(6),
 	Custom = "keep",
 	Source_Path = "keep.path",
+	Solver_Cast_Path = "keep.solver",
 	Source_Padding = UDim.new(0.2, 3),
 }
 local model = {
@@ -75,6 +76,7 @@ model:SetAttribute("Layout_Type", "SurfaceRandom")
 assert(values.Layout_CurveSize0 == nil and values.Layout_CurveSize1 == nil)
 assert(values.Layout_PopulationLimit == NumberRange.new(6))
 model:SetAttribute("Layout_Type", "Single")
+assert(values.Solver_Cast_Path == "keep.solver" and defaults.Solver_Cast_Path == "")
 for _, name in
 	{
 		"Source_Padding",

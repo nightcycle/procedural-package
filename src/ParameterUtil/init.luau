@@ -9,6 +9,9 @@ local function isString(value: unknown): boolean
 	return typeof(value) == "string"
 end
 local common: Types.ParameterSchema = {
+	Solver_Cast_Path = field(function()
+		return ENV.DEFAULT_SOLVER_CAST_PATH
+	end, isString),
 	Source_Path = field(function()
 		return ENV.DEFAULT_SOURCE_PATH
 	end, isString),

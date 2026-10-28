@@ -21,6 +21,11 @@ return function(overrides: { [string]: any }?, moduleOverrides: { [string]: any 
 			return {}
 		end,
 	}
+	environment.OverlapParams = {
+		new = function()
+			return {}
+		end,
+	}
 	if overrides then
 		for key, value in overrides do
 			environment[key] = value

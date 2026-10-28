@@ -60,6 +60,10 @@ export type BaseSourceAttributes = {
 	Source_Alignment: AlignType,
 	Source_ExcludedTags: string,
 }
+export type SolverAttributes = {
+	Solver_Cast_Path: string,
+}
+
 export type BaseRandomAttributes = {
 	Random_Seed: number,
 	Random_Scale: NumberRange,
@@ -88,7 +92,7 @@ export type SurfaceCurvedLineLayoutAttributes = SurfaceRandomLayoutAttributes & 
 	Layout_CurveSize1: UDim,
 }
 -- Public model attributes contain only the fields owned by the selected layout.
-export type PackageAttributes = BaseSourceAttributes & BaseRandomAttributes & BaseLayoutAttributes & {
+export type PackageAttributes = BaseSourceAttributes & SolverAttributes & BaseRandomAttributes & BaseLayoutAttributes & {
 	Source_Padding: UDim?,
 	Layout_SurfaceDetectionMethod: SurfaceDetectionMethod?,
 	Layout_ColumnLimit: NumberRange?,
@@ -100,6 +104,7 @@ export type PackageAttributes = BaseSourceAttributes & BaseRandomAttributes & Ba
 -- Internal math receives a complete snapshot, without adding hidden fields to the model.
 export type ResolvedPackageAttributes =
 	BaseSourceAttributes
+	& SolverAttributes
 	& BaseRandomAttributes
 	& SurfaceGridLayoutAttributes
 	& SurfaceCurvedLineLayoutAttributes
@@ -127,6 +132,69 @@ export type Layout = {
 	Parameters: ParameterSchema,
 	-- The size argument is the largest source bound after area fitting and random scale.
 	GetCells: (Parameters, Vector3, Random) -> { Cell },
+}
+
+-- Internal queries check only the target GeneratedFolder; external queries check surrounding geometry.
+export type CastSolver = {
+	raycast: (
+		proceduralModel: ProceduralModel,
+		parameters: Parameters,
+		targetGeneratedFolder: GeneratedFolder,
+		castingInternally: boolean,
+		origin: Vector3,
+		direction: Vector3
+	) -> RaycastResult?,
+	spherecast: (
+		proceduralModel: ProceduralModel,
+		parameters: Parameters,
+		targetGeneratedFolder: GeneratedFolder,
+		castingInternally: boolean,
+		origin: Vector3,
+		radius: number,
+		direction: Vector3
+	) -> RaycastResult?,
+	blockcast: (
+		proceduralModel: ProceduralModel,
+		parameters: Parameters,
+		targetGeneratedFolder: GeneratedFolder,
+		castingInternally: boolean,
+		origin: CFrame,
+		size: Vector3,
+		direction: Vector3
+	) -> RaycastResult?,
+	shapecast: (
+		proceduralModel: ProceduralModel,
+		parameters: Parameters,
+		targetGeneratedFolder: GeneratedFolder,
+		castingInternally: boolean,
+		shape: BasePart,
+		direction: Vector3,
+		cf: CFrame?,
+		size: Vector3?
+	) -> RaycastResult?,
+	getPartBoundsInBox: (
+		proceduralModel: ProceduralModel,
+		parameters: Parameters,
+		targetGeneratedFolder: GeneratedFolder,
+		castingInternally: boolean,
+		cf: CFrame,
+		size: Vector3
+	) -> { BasePart },
+	getPartBoundsInRadius: (
+		proceduralModel: ProceduralModel,
+		parameters: Parameters,
+		targetGeneratedFolder: GeneratedFolder,
+		castingInternally: boolean,
+		position: Vector3,
+		radius: number
+	) -> { BasePart },
+	getPartBoundsInPart: (
+		proceduralModel: ProceduralModel,
+		parameters: Parameters,
+		targetGeneratedFolder: GeneratedFolder,
+		castingInternally: boolean,
+		shape: BasePart
+	) -> { BasePart },
 }
 
 return Types

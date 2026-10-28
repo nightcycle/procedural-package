@@ -4,6 +4,7 @@
 -- Modules
 local Generator = require(script.Generator)
 local ENV = require(script.ENV)
+local CastSolver = require(script.CastSolver)
 -- Types
 -- Constants
 -- Variables
@@ -13,4 +14,5 @@ local ENV = require(script.ENV)
 return {
 	ENV = ENV,
 	Generator = Generator,
+	CastSolver = CastSolver,
 }
