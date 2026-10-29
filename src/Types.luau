@@ -120,6 +120,8 @@ export type GridLayoutAttributes = BaseLayoutAttributes & {
 export type RandomLayoutAttributes = BaseLayoutAttributes & {
 	Source_Padding: UDim,
 	Layout_PopulationLimit: NumberRange,
+	Layout_AvoidOverlap: boolean,
+	Layout_PlacementAttempts: number,
 }
 -- Public model attributes contain only the fields owned by the selected layout.
 export type PackageAttributes = BaseSourceAttributes & SolverAttributes & BaseRandomAttributes & BaseLayoutAttributes & {
@@ -135,6 +137,8 @@ export type PackageAttributes = BaseSourceAttributes & SolverAttributes & BaseRa
 	Layout_TopPadding: UDim?,
 	Layout_ArchShape: number?,
 	Layout_Sides: number?,
+	Layout_AvoidOverlap: boolean?,
+	Layout_PlacementAttempts: number?,
 }
 -- Internal math receives a complete snapshot, without adding hidden fields to the model.
 export type ResolvedPackageAttributes =
@@ -146,6 +150,7 @@ export type ResolvedPackageAttributes =
 	& ArchLayoutAttributes
 	& NGonLayoutAttributes
 	& GridLayoutAttributes
+	& RandomLayoutAttributes
 export type GenerationFunctionParams<Attributes> = {
 	Attributes: Attributes,
 	Size: Vector3,

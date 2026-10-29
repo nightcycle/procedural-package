@@ -46,7 +46,9 @@ function Preview.generate(
 	scene: Viewport.Scene,
 	parameters: Types.Parameters,
 	template: Types.Template,
-	showCells: boolean
+	showCells: boolean,
+	owner: ProceduralModel?,
+	solver: Types.CastSolver?
 ): number
 	local layout = ParameterUtil.validate(parameters)
 	local random = Random.new(parameters.Attributes.Random_Seed)
@@ -60,7 +62,7 @@ function Preview.generate(
 	-- Placement uses ordinary instance parenting; the engine owns GeneratedFolder creation.
 	PlacementUtil.run(parameters, copies, cells, random, output :: any, function(_instance, _parameters, _target)
 		generated += 1
-	end, nil)
+	end, owner, solver)
 	if showCells then
 		Preview.showCells(scene, cells, parameters.Size)
 	end

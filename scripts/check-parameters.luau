@@ -45,6 +45,8 @@ local values: { [string]: any } = {
 	Source_Path = "keep.path",
 	Solver_Cast_Path = "keep.solver",
 	Source_Padding = UDim.new(0.2, 3),
+	Layout_AvoidOverlap = true,
+	Layout_PlacementAttempts = 19,
 }
 local model = {
 	GetAttribute = function(_self: unknown, name: string): any
@@ -79,6 +81,16 @@ model:SetAttribute("Layout_CurveSize0", UDim.new(0.75, 41))
 model:SetAttribute("Layout_Type", "SurfaceRandom")
 assert(values.Layout_CurveSize0 == nil and values.Layout_CurveSize1 == nil)
 assert(values.Layout_PopulationLimit == NumberRange.new(6))
+assert(
+	values.Layout_AvoidOverlap == nil and values.Layout_PlacementAttempts == nil,
+	"surface random retained volume-only overlap attributes"
+)
+model:SetAttribute("Layout_Type", "Random")
+assert(
+	values.Layout_AvoidOverlap == true and values.Layout_PlacementAttempts == 19,
+	"Random did not restore its overlap settings"
+)
+model:SetAttribute("Layout_Type", "SurfaceRandom")
 model:SetAttribute("Layout_Type", "Single")
 assert(values.Solver_Cast_Path == "keep.solver" and defaults.Solver_Cast_Path == "")
 for _, name in

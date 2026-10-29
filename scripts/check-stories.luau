@@ -125,6 +125,28 @@ local function node(path: string): any
 		end,
 	})
 end
+roblox.implementMethod(
+	"WorldRoot",
+	"GetPartBoundsInBox",
+	function(_world: RInstance, frame: CFrame, size: Vector3, params: any)
+		local matches = {}
+		for _, root in params.FilterDescendantsInstances do
+			for _, part in root:GetDescendants() :: { RInstance } do
+				if not part:IsA("BasePart") then
+					continue
+				end
+				local relative = frame:ToObjectSpace(part.CFrame)
+				local x, y, z = relative.RightVector:Abs(), relative.UpVector:Abs(), relative.ZVector:Abs()
+				local extent = (x * part.Size.X + y * part.Size.Y + z * part.Size.Z + size) / 2
+				local delta = relative.Position:Abs()
+				if delta.X < extent.X and delta.Y < extent.Y and delta.Z < extent.Z then
+					table.insert(matches, part)
+				end
+			end
+		end
+		return matches
+	end
+)
 local replicatedStorage = {
 	Packages = { ProceduralPackage = node("src") },
 	DevPackages = { UILabs = node("DevPackages/_Index/pepeeltoro41_ui-labs@2.4.2/ui-labs/src") },

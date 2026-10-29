@@ -136,7 +136,7 @@ function Util.prepareForLayout(
 	local attributes = parameters.Attributes
 	local layout = Layouts[attributes.Layout_Type]
 	local padding = if layout.Parameters.Source_Padding then attributes.Source_Padding else UDim.new(0)
-	-- Volume counts use authored dimensions; stretching happens after subdivision.
+	-- Grid measures authored dimensions before cell fitting; Random scatters authored-size copies directly.
 	local measuringVolume = layout.Volume == true and fitSize == nil
 	return Util.prepareClone(
 		template,

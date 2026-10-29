@@ -213,8 +213,10 @@
       "InstancePath": "game.Workspace.examples.Random",
       "LayoutType": "Random",
       "Settings": {
+        "Layout_AvoidOverlap": "false",
         "Layout_HeightAxis": "Y",
         "Layout_PauseInterval": "100",
+        "Layout_PlacementAttempts": "32",
         "Layout_PopulationLimit": "12, 12",
         "Layout_Type": "Random",
         "Random_Pan": "0, 0",

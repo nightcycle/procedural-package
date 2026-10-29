@@ -1,35 +1,40 @@
 --!strict
+local ENV = require(script.Parent.Parent.ENV)
+local Schema = require(script.Parent.Parent.ParameterSchema)
 local Types = require(script.Parent.Parent.Types)
-local SurfaceRandom = require(script.Parent.SurfaceRandom)
 local Util = require(script.Parent.Util)
 
 local Layout: Types.Layout = {
 	Volume = true,
 	Parameters = {
-		Source_Padding = SurfaceRandom.Parameters.Source_Padding,
-		Layout_PopulationLimit = SurfaceRandom.Parameters.Layout_PopulationLimit,
+		Source_Padding = Util.Padding,
+		Layout_PopulationLimit = Util.Population,
+		Layout_AvoidOverlap = Schema.field(function()
+			return ENV.DEFAULT_LAYOUT_AVOID_OVERLAP
+		end, function(value)
+			return typeof(value) == "boolean"
+		end),
+		Layout_PlacementAttempts = Schema.field(function()
+			return ENV.DEFAULT_LAYOUT_PLACEMENT_ATTEMPTS
+		end, Schema.positiveInteger),
 	},
-	GetCells = function(parameters: Types.Parameters, sourceSize: Vector3, random: Random): { Types.Cell }
+	GetCells = function(parameters: Types.Parameters, _sourceSize: Vector3, random: Random): { Types.Cell }
+		local padding = parameters.Attributes.Source_Padding
+		local region = (parameters.Size - Vector3.one * padding.Offset * 2) * (1 - padding.Scale * 2)
+		assert(region.X > 0 and region.Y > 0 and region.Z > 0, "Source_Padding leaves no room inside the Random volume")
 		local count = Util.sampleCount(parameters.Attributes.Layout_PopulationLimit, random)
-		if count == 0 then
-			return {}
-		end
-		local capacity = parameters.Size / sourceSize
-		local density = (count / (capacity.X * capacity.Y * capacity.Z)) ^ (1 / 3)
-		local columns = math.clamp(math.ceil(capacity.X * density), 1, count)
-		local layers = math.clamp(math.ceil(capacity.Y * density), 1, math.ceil(count / columns))
-		local rows = math.ceil(count / (columns * layers))
-		local slots = Util.volume(parameters, columns, layers, rows)
-		random:Shuffle(slots)
 		local cells: { Types.Cell } = {}
 		for index = 1, count do
-			local cell = slots[index]
-			cell.Frame += cell.Size * Vector3.new(
-				random:NextNumber(-0.5, 0.5),
-				random:NextNumber(-0.5, 0.5),
-				random:NextNumber(-0.5, 0.5)
-			)
-			table.insert(cells, cell)
+			-- Each copy samples the whole volume independently. Placement subtracts its actual bounds.
+			table.insert(cells, {
+				Frame = CFrame.identity,
+				Size = region,
+				Offset = Vector3.new(
+					random:NextNumber(-0.5, 0.5),
+					random:NextNumber(-0.5, 0.5),
+					random:NextNumber(-0.5, 0.5)
+				),
+			})
 			Util.pause(parameters, index)
 		end
 		return cells

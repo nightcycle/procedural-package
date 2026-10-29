@@ -140,7 +140,7 @@ end), "invalid template axis accepted")
 template:SetAttribute("Layout_HeightAxis", nil)
 
 -- Volume variants fit small 3D cells and allow overlapping height intervals under Floor alignment.
-for _, kind in { "Grid", "Random" } do
+for _, kind in { "Grid" } do
 	scoped = parameters(kind)
 	scoped.Attributes.Layout_ColumnLimit, scoped.Attributes.Layout_RowLimit = NumberRange.new(4), NumberRange.new(3)
 	scoped.Attributes.Layout_PopulationLimit = NumberRange.new(12)
@@ -150,7 +150,7 @@ for _, kind in { "Grid", "Random" } do
 	scoped.Attributes.Layout_SurfaceDetectionMethod = "Raycast"
 	scoped.Attributes.Solver_Cast_Path = "must-not-resolve"
 	local volume = Layouts[kind].GetCells(scoped, template.Size, random(3))
-	assert(#volume == (if kind == "Grid" then 48 else 12))
+	assert(#volume == 48)
 	for _, cell in volume do
 		assert(cell.FitSize == cell.Size and cell.Size.Y < scoped.Size.Y, "volume cell must subdivide height")
 	end
@@ -181,6 +181,24 @@ for _, kind in { "Grid", "Random" } do
 	end
 	assert(distinct > 1, "Floor alignment collapsed random height")
 	assert(overlapping, "volume cells never overlap vertically")
+end
+
+-- Random uses independent normalized samples, with no density-dependent cells or fitting sizes.
+scoped = parameters("Random")
+scoped.Attributes.Layout_PopulationLimit = NumberRange.new(12)
+local scatter = Layouts.Random.GetCells(scoped, template.Size, random(3))
+assert(#scatter == 12)
+for _, cell in scatter do
+	assert(cell.Frame == CFrame.identity and cell.Size == scoped.Size and cell.FitSize == nil)
+	assert(
+		cell.Offset
+			and cell.Offset.X >= -0.5
+			and cell.Offset.X <= 0.5
+			and cell.Offset.Y >= -0.5
+			and cell.Offset.Y <= 0.5
+			and cell.Offset.Z >= -0.5
+			and cell.Offset.Z <= 0.5
+	)
 end
 
 -- Stack pads resolve in X/Z, interpolate bottom-to-top, and leave height unchanged.
@@ -287,6 +305,8 @@ for _, case in
 	{
 		{ Kind = "Arch", Name = "Layout_ArchShape", Values = { -0.1, 1.1, math.huge, 0 / 0 } },
 		{ Kind = "Grid", Name = "Layout_LayerLimit", Values = { NumberRange.new(-1), NumberRange.new(0.1, 0.9), 3 } },
+		{ Kind = "Random", Name = "Layout_AvoidOverlap", Values = { 1, "true" } },
+		{ Kind = "Random", Name = "Layout_PlacementAttempts", Values = { 0, -1, 1.5, math.huge } },
 		{ Kind = "NGon", Name = "Layout_Sides", Values = { 0, 2, 3.5, math.huge } },
 		{ Kind = "Stack", Name = "Layout_BasePadding", Values = { UDim.new(0.5), UDim.new(0, -1), 2 } },
 		{ Kind = "Arch", Name = "Layout_TopPadding", Values = { UDim.new(0 / 0), UDim.new(-1), "invalid" } },
