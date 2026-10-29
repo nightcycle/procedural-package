@@ -3,6 +3,7 @@ local IndexUtil = require(script.Parent.Parent.IndexUtil)
 local ParameterUtil = require(script.Parent.ParameterUtil)
 local GeometryUtil = require(script.Parent.GeometryUtil)
 local Types = require(script.Parent.Types)
+local Layouts = require(script.Parent.Layouts)
 type Template = Types.Template
 type Parameters = Types.Parameters
 local Util = {}
@@ -63,12 +64,13 @@ function Util.prepareClone(
 	randomScale: number,
 	padding: UDim,
 	pivotMethod: Types.PivotMethod,
-	paddingAxes: Vector3?
+	paddingAxes: Vector3?,
+	heightAxis: Types.HeightAxis?
 ): Template
 	assert(template.Archivable, `template "{template:GetFullName()}" must be Archivable`)
 	local instance = template:Clone()
 	if pivotMethod ~= "Pivot" then
-		GeometryUtil.setPivot(instance, GeometryUtil.getGeneratedPivot(instance, pivotMethod))
+		GeometryUtil.setPivot(instance, GeometryUtil.getGeneratedPivot(instance, pivotMethod, heightAxis))
 	end
 	-- Measure in the generated orientation, including any native pivot rotation.
 	instance:PivotTo(rotation)
@@ -78,7 +80,9 @@ function Util.prepareClone(
 	assert(size.X > 0 and size.Y > 0 and size.Z > 0, "Source_Padding.Offset leaves no room inside the layout cell")
 	local uniformScale = randomScale
 	if instance:IsA("BasePart") and scaleMethod == "Stretch" then
-		local rescale = size / instance.Size
+		-- Stretch in the part's axes after applying the initial height rotation.
+		local localSize = GeometryUtil.axisAlignedSize(instance.CFrame.Rotation:Inverse(), size)
+		local rescale = localSize / instance.Size
 		local baseOffset = instance.PivotOffset
 		instance.Size *= rescale
 		instance.PivotOffset =
@@ -122,19 +126,29 @@ function Util.prepareClone(
 	return instance
 end
 
--- Fit once against the generation area, before layout spacing or orientation.
-function Util.prepareForLayout(template: Template, parameters: Parameters, randomScale: number): Template
+-- Fit against the area, or the explicit segment dimensions supplied by a solid-shape layout.
+function Util.prepareForLayout(
+	template: Template,
+	parameters: Parameters,
+	randomScale: number,
+	fitSize: Vector3?
+): Template
 	local attributes = parameters.Attributes
+	local layout = Layouts[attributes.Layout_Type]
+	local padding = if layout.Parameters.Source_Padding then attributes.Source_Padding else UDim.new(0)
+	-- Volume counts use authored dimensions; stretching happens after subdivision.
+	local measuringVolume = layout.Volume == true and fitSize == nil
 	return Util.prepareClone(
 		template,
-		parameters.Size,
-		CFrame.identity,
-		attributes.Source_ScaleMethod,
-		attributes.Source_ScaleReference,
+		fitSize or parameters.Size,
+		GeometryUtil.heightRotation(attributes.Layout_HeightAxis),
+		if measuringVolume then "Fit" else attributes.Source_ScaleMethod,
+		if measuringVolume then "Min" else attributes.Source_ScaleReference,
 		randomScale,
-		if attributes.Layout_Type == "Single" then UDim.new(0) else attributes.Source_Padding,
+		padding,
 		attributes.Source_PivotMethod,
-		Vector3.new(1, 0, 1)
+		Vector3.new(1, 0, 1),
+		attributes.Layout_HeightAxis
 	)
 end
 

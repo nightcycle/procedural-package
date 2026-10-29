@@ -35,6 +35,7 @@ end
 local changed, destroying = signal(), signal()
 local values: { [string]: any } = {
 	Layout_Type = "SurfaceGrid",
+	Layout_Angle = 120,
 	Layout_ColumnLimit = NumberRange.new(3, 7),
 	Layout_RowLimit = NumberRange.new(2, 5),
 	Layout_CurveSize0 = UDim.new(0.5, 23),
@@ -62,6 +63,9 @@ local model = {
 local defaults = load.getDefaults({ Custom = "keep" }, "SurfaceGrid")
 assert(defaults.Layout_CurveSize0 == nil and defaults.Layout_PopulationLimit == nil)
 local disconnect = load.bindAttributes(model, defaults)
+assert(values.Layout_Angle == nil, "retired arch angle remained visible")
+model:SetAttribute("Layout_Angle", 90)
+assert(values.Layout_Angle == nil, "retired arch angle reappeared")
 assert(values.Layout_ColumnLimit == NumberRange.new(3, 7) and values.Layout_RowLimit == NumberRange.new(2, 5))
 assert(values.Layout_CurveSize0 == nil and values.Layout_CurveSize1 == nil and values.Layout_PopulationLimit == nil)
 assert(defaults.Layout_CurveSize0 == nil and defaults.Layout_PopulationLimit == nil)
@@ -100,6 +104,24 @@ model:SetAttribute("Layout_Type", "SurfaceCurvedLine")
 assert(values.Layout_CurveSize0 == UDim.new(-0.5, 99), "removed values should be retained privately")
 
 -- Starting a replacement binding disconnects the old listeners; destroy is idempotent.
+for _, kind in { "Stack", "Arch", "NGon", "Grid", "Random", "Single" } do
+	model:SetAttribute("Layout_Type", kind)
+	local expected = load.getDefaults({ Custom = "keep" }, kind)
+	for name in values do
+		assert(expected[name] ~= nil, `{kind} retained inactive {name}`)
+	end
+	for name in expected do
+		-- Shared attributes are supplied by the engine; binding owns layout-specific fields.
+		if
+			name ~= "Layout_Type"
+			and name ~= "Layout_PauseInterval"
+			and name ~= "Layout_HeightAxis"
+			and name:sub(1, 7) == "Layout_"
+		then
+			assert(values[name] ~= nil, `{kind} lacks {name}`)
+		end
+	end
+end
 assert(activeConnections == 2)
 local stop = load.bindAttributes(model, defaults)
 assert(activeConnections == 2)
@@ -111,9 +133,17 @@ stop()
 assert(activeConnections == 0)
 
 -- A sparse public snapshot gains only internal defaults, preserving source parameters and input identity.
-for _, kind in { "Single", "SurfaceGrid", "SurfaceRandom", "SurfaceCurvedLine" } do
+for _, kind in
+	{ "Single", "SurfaceGrid", "SurfaceRandom", "SurfaceCurvedLine", "Stack", "Arch", "NGon", "Grid", "Random" }
+do
 	local attributes = load.getDefaults(nil, kind)
-	assert((attributes.Source_Padding == nil) == (kind == "Single"), `wrong padding visibility for {kind}`)
+	local padded = kind == "SurfaceGrid"
+		or kind == "SurfaceRandom"
+		or kind == "SurfaceCurvedLine"
+		or kind == "Grid"
+		or kind == "Random"
+	assert((attributes.Source_Padding ~= nil) == padded, `wrong padding visibility for {kind}`)
+	assert(attributes.Layout_HeightAxis == "Y")
 	local before = table.clone(attributes)
 	local pauses = 0
 	local parameters = {
@@ -152,7 +182,18 @@ local literalCases: { [string]: { string } } = {
 	Source_ScaleMethod = { "Stretch", "Fill", "Fit" },
 	Source_ScaleReference = { "Height", "Average", "Min", "Max" },
 	Layout_SurfaceDetectionMethod = { "Raycast", "Shapecast", "None" },
-	Layout_Type = { "Single", "SurfaceGrid", "SurfaceRandom", "SurfaceCurvedLine" },
+	Layout_HeightAxis = { "X", "Y", "Z" },
+	Layout_Type = {
+		"Single",
+		"SurfaceGrid",
+		"SurfaceRandom",
+		"SurfaceCurvedLine",
+		"Stack",
+		"Arch",
+		"NGon",
+		"Grid",
+		"Random",
+	},
 }
 local parameters = load.resolve({
 	Attributes = load.getDefaults(nil, "SurfaceGrid"),
@@ -195,7 +236,7 @@ for name, accepted in literalCases do
 		end, `invalid {name} ({value}); {expected}`)
 	end
 	parameters.Attributes[name] = original
-	if string.sub(name, 1, 7) == "Source_" then
+	if string.sub(name, 1, 7) == "Source_" or name == "Layout_HeightAxis" then
 		template:SetAttribute(name, "invalid")
 		expectError(function()
 			load.resolveTemplateAttributes(template, parameters)
@@ -203,9 +244,12 @@ for name, accepted in literalCases do
 		template:SetAttribute(name, nil)
 	end
 end
-expectError(function()
-	load.getDefaults(nil, "invalid")
-end, 'invalid Layout_Type: invalid; expected one of: "Single", "SurfaceGrid", "SurfaceRandom", "SurfaceCurvedLine"')
+expectError(
+	function()
+		load.getDefaults(nil, "invalid")
+	end,
+	'invalid Layout_Type: invalid; expected one of: "Single", "SurfaceGrid", "SurfaceRandom", "SurfaceCurvedLine", "Stack", "Arch", "NGon", "Grid", "Random"'
+)
 parameters.Attributes.Layout_PauseInterval = 0
 expectError(function()
 	load.validate(parameters)

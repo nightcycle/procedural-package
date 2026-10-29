@@ -7,7 +7,8 @@ local Controls = require(Components.Controls)
 local Fixtures = require(Components.Fixtures)
 local Types = require(script.Parent.Parent.Types)
 local Parameters = require(script.Parent)
-local layouts: { Types.LayoutType } = { "Single", "SurfaceGrid", "SurfaceRandom", "SurfaceCurvedLine" }
+local layouts: { Types.LayoutType } =
+	{ "Single", "SurfaceGrid", "SurfaceRandom", "SurfaceCurvedLine", "Stack", "Arch", "NGon", "Grid", "Random" }
 
 return Story.create(
 	"Parameter attributes · Active layout schema",
@@ -20,7 +21,12 @@ return Story.create(
 		local attributes = Parameters.getDefaults(nil, selected)
 		local fields: { string } = {}
 		for name in pairs(attributes :: Types.ExtraAttributes) do
-			if name:sub(1, 7) == "Layout_" and name ~= "Layout_Type" and name ~= "Layout_PauseInterval" then
+			if
+				name:sub(1, 7) == "Layout_"
+				and name ~= "Layout_Type"
+				and name ~= "Layout_PauseInterval"
+				and name ~= "Layout_HeightAxis"
+			then
 				table.insert(fields, name)
 			end
 		end
@@ -38,7 +44,7 @@ return Story.create(
 		scene.SetStatus(
 			`{selected}: {#fields} layout-specific fields\n{if #fields > 0
 				then table.concat(fields, " · ")
-				else "Only Layout_Type / Layout_PauseInterval, plus shared source and random fields."}`
+				else "Only Layout_Type / Layout_PauseInterval / Layout_HeightAxis, plus shared source and random fields."}`
 		)
 	end
 )

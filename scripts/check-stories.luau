@@ -234,6 +234,19 @@ for _, path in paths do
 		inspect()
 		updated += 1
 	end
+	if path == "stories/Attributes/Layouts.story" then
+		for _, kind in story.controls.Layout_Type.List do
+			for _, axis in { "X", "Y", "Z" } do
+				for _, asModel in { true, false } do
+					local changed = table.clone(values)
+					changed.Layout_Type, changed.Layout_HeightAxis, changed.AsModel = kind, axis, asModel
+					listener(changed, {})
+					inspect()
+					updated += 1
+				end
+			end
+		end
+	end
 	cleanup()
 	assert(disconnected and #target:GetChildren() == 0 and connections == 0, `cleanup leak in {path}`)
 	listener(values, {})

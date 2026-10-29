@@ -28,6 +28,11 @@ end
 function Preview.showCells(scene: Viewport.Scene, cells: { Types.Cell }, fullSize: Vector3)
 	scene.Box(CFrame.identity, fullSize, Color3.fromRGB(76, 93, 120))
 	for _, cell in cells do
+		if cell.FitSize or cell.Offset and cell.Offset.Y ~= 0 then
+			scene.Box(cell.Frame, cell.Size, Fixtures.Blue)
+			scene.Marker(cell.Frame, 0.9)
+			continue
+		end
 		scene.Box(
 			CFrame.new(cell.Frame.X, -fullSize.Y / 2, cell.Frame.Z) * cell.Frame.Rotation,
 			Vector3.new(cell.Size.X, 0.06, cell.Size.Z),

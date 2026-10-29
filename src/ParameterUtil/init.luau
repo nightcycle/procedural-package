@@ -4,6 +4,7 @@ local Types = require(script.Parent.Types)
 local Schema = require(script.Parent.ParameterSchema)
 local Layouts = require(script.Parent.Layouts)
 local field = Schema.field
+local retired: { [string]: boolean } = { Layout_Angle = true }
 
 local function isString(value: unknown): boolean
 	return typeof(value) == "string"
@@ -59,6 +60,9 @@ local common: Types.ParameterSchema = {
 	Layout_Type = field(function()
 		return ENV.DEFAULT_LAYOUT_TYPE
 	end, Types.LayoutType),
+	Layout_HeightAxis = field(function()
+		return ENV.DEFAULT_LAYOUT_HEIGHT_AXIS
+	end, Types.HeightAxis, true),
 }
 local all = table.clone(common)
 for _, layout in Layouts do
@@ -97,7 +101,7 @@ function Util.getDefaults(
 	end
 	if extraAttributes then
 		for name, value in extraAttributes do
-			assert(all[name] == nil, `custom attribute {name} is reserved by the package`)
+			assert(all[name] == nil and not retired[name], `custom attribute {name} is reserved by the package`)
 			defaults[name] = value
 		end
 	end
@@ -147,6 +151,12 @@ function Util.bindAttributes(
 		end
 		local schema = Layouts[selected :: Types.LayoutType].Parameters
 		syncing = true
+		for name in retired do
+			defaults[name] = nil
+			if model:GetAttribute(name) ~= nil then
+				model:SetAttribute(name, nil)
+			end
+		end
 		for name in all do
 			if common[name] then
 				continue
@@ -187,7 +197,7 @@ function Util.bindAttributes(
 		connections,
 		model.AttributeChanged:Connect(function(name: string)
 			-- Also remove an inactive field if an older generation/default snapshot re-adds it.
-			if name == "Layout_Type" or (all[name] ~= nil and common[name] == nil) then
+			if name == "Layout_Type" or retired[name] or (all[name] ~= nil and common[name] == nil) then
 				sync()
 			end
 		end)

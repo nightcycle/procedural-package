@@ -16,7 +16,7 @@ return Package.Generator.new(model)
 
 Set `Source_Path` to the full path of a BasePart, Model, or Folder. Folders select seeded random templates from eligible descendants. Models are treated as whole templates; their children are not independently selected. `Source_ExcludedTags` skips matching descendants and their subtrees. Commas separate tags.
 
-Only the selected layout's attributes appear on the ProceduralModel. Changing `Layout_Type` removes unrelated fields with `SetAttribute(name, nil)` and adds the new layout's fields. Previously edited layout values are cached for that model during the current generator session and restored when you switch back. `Source_Padding` belongs only to surface layouts; Single uses the full area without padding. Other source, random, pause, and custom attributes are preserved.
+Only the selected layout's attributes appear on the ProceduralModel. Changing `Layout_Type` removes unrelated fields with `SetAttribute(name, nil)` and adds the new layout's fields. Previously edited layout values are cached for that model during the current generator session and restored when you switch back. `Source_Padding` belongs to surface layouts, Grid, and Random; Single uses the full area without padding. Other source, random, pause, and custom attributes are preserved.
 
 Pass the owning model to `Generator.new(model)` or `Generator.append(defaults, callback, model)` to keep the Properties panel synchronized. The constructor manages attribute changes outside `OnGenerate`; its optional `Destroy()` cleanup disconnects the binding, and destroying the model also disconnects it. Generators constructed without an owner still resolve missing layout fields internally but cannot edit a model's displayed attributes.
 
@@ -30,8 +30,25 @@ When updating an already-open place, save and reopen it once if existing generat
 | `SurfaceGrid` | One X/Z layer of evenly spaced cells. | `Layout_ColumnLimit`, `Layout_RowLimit`: NumberRanges clamping the calculated integer dimensions. |
 | `SurfaceRandom` | Seeded, shuffled X/Z cells with random offsets inside each cell's free space. | `Layout_PopulationLimit`: NumberRange sampled as an integer count. |
 | `SurfaceCurvedLine` | Copies along a cubic Bézier curve from the front-left corner to the back-right corner, rotated along its horizontal tangent. | `Layout_PopulationLimit`: NumberRange clamping the natural fit; `Layout_CurveSize0`, `Layout_CurveSize1`: signed UDim handles. |
+| `Stack` | Vertical tower with an interpolated X/Z footprint from base to top. | `Layout_PopulationLimit`, `Layout_BasePadding`, `Layout_TopPadding`. |
+| `Arch` | Bézier arch in X/Y, fitted from floor to ceiling, with template height following the tangent. | Stack parameters plus `Layout_ArchShape`: 0 = triangle, 1 = rectangle (default 0.5). |
+| `NGon` | Regular polygon in X/Z, with one template per side, equal side lengths, and a face flush with the front plane (-Z). | `Layout_Sides`: integer ≥ 3 (default 6). |
+| `Grid` | Filled 3D cells with randomized height offsets that may overlap adjacent layers. | `Layout_ColumnLimit`, `Layout_RowLimit`, `Layout_LayerLimit`. |
+| `Random` | Shuffled 3D cells, fitted separately, with randomized X/Y/Z placement. | `Layout_PopulationLimit`. |
 
-All layouts scale sources against the full generation box before calculating placement. Fitting and padding use the area's dimensions, independently of cell counts; placement then applies layout and random rotation without fitting again. Bounds are measured from the resulting geometry, including source overrides, fitting `Size` attributes, and Model scale limits. Mixed sources reserve the componentwise largest scaled bounds, using the maximum `Random_Scale` without consuming the seeded placement RNG. Random offsets subtract each copy's actual scaled and rotated bounds from its assigned region.
+Single and surface layouts fit sources against the full generation box before calculating placement, retaining that fit independently of cell counts. Stack, Arch, NGon, Grid, and Random fit each source to its own segment or cell. Grid and Random measure authored, rotated source dimensions (fitted down if needed) to plan subdivision, so Stretch and Fill/Height do not turn every source into a full-height pillar. Bounds include source overrides, fitting `Size` attributes, and Model scale limits. Mixed sources reserve the componentwise largest measured bounds, using maximum `Random_Scale` without consuming the seeded placement RNG.
+
+`Layout_HeightAxis` is shared by every layout and accepts `"X"`, `"Y"` (default), or `"Z"`. It selects the template's authored height direction and rotates that positive axis to layout +Y **before fitting and measuring**. Stretch maps target dimensions into the rotated source axes; Fill/Height uses the rotated height. Bottom/Top pivots also follow this axis. Layout and random rotations apply afterward, so Arch carries that height along its tangent. Templates may override `Layout_HeightAxis` individually.
+
+Stack and Arch clamp their natural counts to `Layout_PopulationLimit` (default 10). Stack uses area height divided by fitted template height; Arch uses approximate arc length divided by fitted template height. Both support zero copies. `Layout_BasePadding` and `Layout_TopPadding` are nonnegative `UDim` insets on each side of local X/Z, defaulting to zero. Scale must be less than 0.5. Stack interpolates between the first and last tiers; Arch interpolates symmetrically from both bases to the crown. A single Stack tier uses midpoint padding. Insets resolve as `(dimension - 2 * Offset) * (1 - 2 * Scale)` and must leave positive dimensions.
+
+Arch uses two symmetric rational quadratic Bézier halves. `Layout_ArchShape = 0` gives straight triangular legs; `0.5` gives a rounded arch; `1` gives vertical legs and a flat roof. Adaptive curve-length sampling distributes segment endpoints by arc distance. The layout solves width and height independently using rotated segment bounds so both bases reach the floor and the crown reaches the ceiling, including on rectangular boxes. Radial thickness uses fitted source width capped at a quarter of area width and half its height. Padding retains its configured units during this fit. One segment fills the box because it cannot form an opening. `Layout_Angle` has been retired and is removed from bound models.
+
+NGon keeps a regular circumcircle on rectangular areas, reducing its radius until all side footprints fit in X/Z. It rotates one side parallel to the front plane and translates the whole polygon until that side's outer face touches -Z. Its wall depth uses fitted source depth capped at `min(Size.X, Size.Z) / (2 * Layout_Sides)`, and its height uses `Size.Y`. Use Stretch on BaseParts to fill the tower tiers, arch segments, and polygon sides; uniform Fill/Fit and random transforms retain their usual behavior and can leave gaps or exceed segment bounds.
+
+The five new layouts place geometry centers in their cells and ignore `Source_Alignment`, preserving their vertical structure even when the shared alignment is Floor. They perform no surface queries. Source pivot-offset attributes still apply afterward.
+
+Grid divides the box into columns (X), layers (Y), and rows (Z), then fits a copy to every cell. Natural counts use measured source dimensions and X/Z padding; each count is clamped to its limit (all default to 1–100). Fix `Layout_LayerLimit = NumberRange.new(4)` for four height layers, or zero for no output. Copies jitter by up to half a cell's height, allowing vertical overlap even with Stretch. Random samples its population, builds cells across X/Y/Z according to the box and source proportions, shuffles those cells, and jitters each chosen copy by up to half a cell on every axis. Both modes constrain geometry centers to the generation box using the actual rotated copy bounds, allowing copies to cross internal cell boundaries. Source fitting and padding apply to each cell rather than the whole box.
 
 `SurfaceGrid` fits as many cells as possible using those scaled bounds, including X/Z `Source_Padding`, then clamps the counts to the limits. For example, a 1×1×1 source using Fill/Height in a 5×2×5 area becomes 2×2×2, so an unrestricted grid fits 2 columns and 2 rows. The outer padded footprints sit flush with the area's edges and corners. For multiple cells on an axis, centers are spaced by `max(area dimension - padded footprint, 0) / (count - 1)`. Scaled source dimensions stay fixed: leftover space becomes gaps between cells, while a required count that cannot fit compresses the spacing so cells overlap. For a 5-stud dimension and 1-stud footprint with zero padding, limits `(0, 3)` produce 3 cells spaced `2` studs apart, and `(10, 10)` produce 10 cells spaced `4/9` studs apart. A single cell is centered on its axis; footprints larger than the area also stay centered on that axis. Zero rows or columns produce no cells. Configured padding remains between the source geometry and the outer edges; use zero padding for flush geometry. Limits default to 1–100. Set both ends of a range to the same integer to fix a dimension, for example `NumberRange.new(4)` columns and `NumberRange.new(3)` rows produce 12 copies. Source overrides affect fitted bounds but do not override the area's layout or count limits.
 
@@ -59,7 +76,7 @@ Copies sample approximately equal arc distances along the reference curve, then 
 | `Source_PivotMethod` | `"Pivot"` | Origin used for scaling, rotation, and placement. |
 | `Source_ScaleMethod` | `"Stretch"` | Stretch BaseParts to the generation area, uniformly Fill, or Fit without increasing source size. Models always scale uniformly. |
 | `Source_ScaleReference` | `"Min"` | Uniform fitting reference: `Height`, `Average`, `Min`, or `Max`. |
-| `Source_Padding` | `UDim.new(0.1, 0)` | Surface layouts only: insets X/Z before fitting and reserves space around grid footprints. Removed and ignored by Single. Scale must be in [0, 0.5), Offset nonnegative. |
+| `Source_Padding` | `UDim.new(0.1, 0)` | Surface layouts, Grid, and Random: insets X/Z before fitting and reserves space around grid footprints. Scale must be in [0, 0.5), Offset nonnegative. |
 | `Source_Alignment` | `"Floor"` | Place the selected origin on the area's floor, or use `"Center"` for the cell center. |
 | `Source_ExcludedTags` | `""` | Comma-separated tags excluded during folder selection. |
 | `Solver_Cast_Path` | `""` | ModuleScript implementing `Types.CastSolver`; empty uses the package's default solver. Uses `Source_PathDelimiter` and `Source_MaxYield` to resolve the path. |
@@ -67,9 +84,10 @@ Copies sample approximately equal arc distances along the reference curve, then 
 | `Random_Scale` | `NumberRange.new(1)` | Finite positive uniform scale multiplier. |
 | `Random_Roll`, `Random_Pan`, `Random_Tilt` | `NumberRange.new(0)` | Random X/Y/Z rotation ranges in degrees. |
 | `Layout_PauseInterval` | `100` | Positive integer iterations between cooperative pauses. |
+| `Layout_HeightAxis` | `"Y"` | Template height axis: X, Y, or Z; rotates before fitting, measurement, and layout placement. |
 | `Layout_SurfaceDetectionMethod` | `"None"` | Surface layouts accept `None`, `Raycast`, or `Shapecast`. Ignored by `Single`. |
 
-Source templates may override `Source_PivotMethod`, `Source_ScaleMethod`, `Source_ScaleReference`, `Source_Alignment`, and `Random_Scale/Roll/Pan/Tilt`. Path, padding, excluded tags, seed, and layout settings stay controlled by the generation area. Validation happens before those overrides are used; overrides never mutate the area's attributes.
+Source templates may override `Source_PivotMethod`, `Source_ScaleMethod`, `Source_ScaleReference`, `Source_Alignment`, `Layout_HeightAxis`, and `Random_Scale/Roll/Pan/Tilt`. Path, padding, excluded tags, seed, and other layout settings stay controlled by the generation area. Validation happens before those overrides are used; overrides never mutate the area's attributes.
 
 A Vector3 `Size` attribute on a source overrides dimensions used for uniform fitting. Model dimensions are authored at model scale 1. A CFrame `PivotOffset` **attribute** is applied last as `solvedOrigin * PivotOffset`; its translation is in studs and is not rescaled. This is separate from a BasePart's native `PivotOffset` property, which is respected by `Source_PivotMethod = "Pivot"` and scales with geometry.
 
@@ -79,7 +97,7 @@ A Vector3 `Size` attribute on a source overrides dimensions used for uniform fit
 | --- | --- |
 | `Pivot` | Model or BasePart native pivot. |
 | `Center` | Model bounding box center or BasePart CFrame. |
-| `Bottom` / `Top` | Extents center minus/plus half its height along local Y. |
+| `Bottom` / `Top` | Extents center minus/plus half its height along `Layout_HeightAxis`. |
 | `PrimaryPartPivot` / `PrimaryPartCenter` / `PrimaryPartBottom` / `PrimaryPartTop` | Corresponding origin of the Model's PrimaryPart. |
 
 PrimaryPart variants fall back to the matching non-PrimaryPart behavior for Models without a PrimaryPart and for BaseParts. They transform the entire copy. Use `Bottom` with `Floor` to stand copies on the floor without changing native pivots.
@@ -151,7 +169,7 @@ This refactor adopts the renamed attributes; existing models and source override
 | `RandomSeed/Scale/Roll/Pan/Tilt` | Corresponding `Random_Seed/Scale/Roll/Pan/Tilt` |
 | `PauseInterval` | `Layout_PauseInterval` |
 | `GeneratedSurfaceDetectionMethod` | `Layout_SurfaceDetectionMethod` |
-| `RandomPlacement` | `Layout_Type` (`Single`, `SurfaceGrid`, `SurfaceRandom`, `SurfaceCurvedLine`) |
+| `RandomPlacement` | `Layout_Type` (see the layout table above) |
 | `GeneratedCount` | Grid row/column limits, or population limits for Random/CurvedLine. `Single` always generates one copy. |
 
 The old `Line` mode is replaced by `SurfaceCurvedLine`; setting both curve sizes to zero produces a straight corner-to-corner diagonal. Surface layouts always use one X/Z layer, including with Center alignment.
@@ -162,10 +180,11 @@ Each module under `src/Layouts` owns its parameter schema and cell calculations.
 
 To add a layout, define its typed attributes and a module with `Parameters` and `GetCells`, then register it in `Layouts/init` and `Types.LayoutType`. Layout defaults and validation flow through the registry without changes to Generator.
 
-The demo contains exactly four ProceduralModels under `Workspace.examples`, one per layout type. They share a pillar source and can each switch layout by editing `Layout_Type`. Rebuild with:
+The demo contains nine ProceduralModels under `Workspace.examples`, one per layout type. They share a pillar source and can each switch layout by editing `Layout_Type`. Rebuild with:
 
 ```sh
 lune run scripts/check-layouts.luau
+lune run scripts/check-volume-layouts.luau
 lune run scripts/check-parameters.luau
 lune run scripts/check-cast-solver.luau
 lune run scripts/build-demo.luau

@@ -30,30 +30,43 @@ local sourcePath = "game.ReplicatedStorage.lib.ruin.pillar.Meshes/PolygonNature_
 local source = library.ruin.pillar:FindFirstChild("Meshes/PolygonNature_Prop_Pillar_01")
 assert(source and source:IsA("BasePart"), "Missing demo pillar source")
 local entries = {}
-local layouts = { "Single", "SurfaceGrid", "SurfaceRandom", "SurfaceCurvedLine" }
+local layouts =
+	{ "Single", "SurfaceGrid", "SurfaceRandom", "SurfaceCurvedLine", "Stack", "Arch", "NGon", "Grid", "Random" }
 for index, layout in layouts do
 	local instance = roblox.Instance.new("ProceduralModel") :: RInstance
 	instance.Name = layout
 	instance.Size = Vector3.new(72, 36, 56)
-	instance.WorldPivotData = CFrame.new((index - 2.5) * 100, 20, 0)
+	instance.WorldPivotData = CFrame.new(((index - 1) % 3 - 1) * 100, 20, math.floor((index - 1) / 3) * 100)
 	instance.NeedsPivotMigration = false
 	local attributes = ParameterUtil.getDefaults(nil, layout)
 	attributes.Source_Path = sourcePath
 	attributes.Source_PivotMethod = "Bottom"
 	attributes.Source_ScaleMethod = "Fit"
-	if layout ~= "Single" then
+	if layout == "Grid" or layout == "Random" then
+		attributes.Source_ScaleMethod = "Stretch"
+	end
+	if attributes.Source_Padding ~= nil then
 		attributes.Source_Padding = UDim.new(0.05, 0)
 	end
 	attributes.Layout_Type = layout
-	if layout == "SurfaceGrid" then
+	if layout == "SurfaceGrid" or layout == "Grid" then
 		attributes.Layout_ColumnLimit = NumberRange.new(4)
 		attributes.Layout_RowLimit = NumberRange.new(3)
-	elseif layout == "SurfaceRandom" or layout == "SurfaceCurvedLine" then
+		if layout == "Grid" then
+			attributes.Layout_LayerLimit = NumberRange.new(4)
+		end
+	elseif attributes.Layout_PopulationLimit ~= nil then
 		attributes.Layout_PopulationLimit = NumberRange.new(12)
 	end
 	if layout == "SurfaceCurvedLine" then
 		attributes.Layout_CurveSize0 = UDim.new(0, 30)
 		attributes.Layout_CurveSize1 = UDim.new(0, 30)
+	end
+	if layout == "Stack" or layout == "Arch" or layout == "NGon" then
+		attributes.Source_ScaleMethod = "Stretch"
+		if layout ~= "NGon" then
+			attributes.Layout_TopPadding = UDim.new(0.15, 0)
+		end
 	end
 	attributes.Random_Seed = 2026
 	local settings: { [string]: string } = {}
@@ -88,17 +101,12 @@ for _, child in saved:GetChildren() do
 	assert(instance.Generator and instance.Generator.Parent == instance)
 	assert(instance.Name == instance:GetAttribute("Layout_Type"))
 	assert(instance:GetAttribute("Source_Path") == sourcePath)
-	if instance.Name == "Single" then
-		assert(instance:GetAttribute("Source_Padding") == nil)
+	local expected = ParameterUtil.getDefaults(nil, instance.Name)
+	for name in instance:GetAttributes() do
+		assert(expected[name] ~= nil, `{instance.Name} exposes inactive {name}`)
 	end
-	if instance.Name ~= "SurfaceCurvedLine" then
-		assert(instance:GetAttribute("Layout_CurveSize0") == nil and instance:GetAttribute("Layout_CurveSize1") == nil)
-	end
-	if instance.Name ~= "SurfaceGrid" then
-		assert(instance:GetAttribute("Layout_ColumnLimit") == nil and instance:GetAttribute("Layout_RowLimit") == nil)
-	end
-	if instance.Name == "Single" or instance.Name == "SurfaceGrid" then
-		assert(instance:GetAttribute("Layout_PopulationLimit") == nil)
+	for name in expected do
+		assert(instance:GetAttribute(name) ~= nil, `{instance.Name} lacks {name}`)
 	end
 end
 fs.writeFile("demo/workspace/examples.rbxm", bytes)

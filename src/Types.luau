@@ -17,7 +17,17 @@ export type PivotMethod =
 	| "PrimaryPartTop"
 export type ScaleReference = "Height" | "Average" | "Min" | "Max"
 export type ScaleMethod = "Stretch" | "Fill" | "Fit"
-export type LayoutType = "Single" | "SurfaceGrid" | "SurfaceRandom" | "SurfaceCurvedLine"
+export type HeightAxis = "X" | "Y" | "Z"
+export type LayoutType =
+	"Single"
+	| "SurfaceGrid"
+	| "SurfaceRandom"
+	| "SurfaceCurvedLine"
+	| "Stack"
+	| "Arch"
+	| "NGon"
+	| "Grid"
+	| "Random"
 
 export type Validator = (unknown) -> (boolean, string?)
 
@@ -48,7 +58,9 @@ Types.PivotMethod = literal(
 )
 Types.ScaleReference = literal("Height", "Average", "Min", "Max")
 Types.ScaleMethod = literal("Stretch", "Fill", "Fit")
-Types.LayoutType = literal("Single", "SurfaceGrid", "SurfaceRandom", "SurfaceCurvedLine")
+Types.HeightAxis = literal("X", "Y", "Z")
+Types.LayoutType =
+	literal("Single", "SurfaceGrid", "SurfaceRandom", "SurfaceCurvedLine", "Stack", "Arch", "NGon", "Grid", "Random")
 
 export type BaseSourceAttributes = {
 	Source_Path: string,
@@ -74,6 +86,7 @@ export type BaseRandomAttributes = {
 export type BaseLayoutAttributes = {
 	Layout_PauseInterval: number,
 	Layout_Type: LayoutType,
+	Layout_HeightAxis: HeightAxis,
 }
 export type SingleLayoutAttributes = BaseLayoutAttributes
 export type BaseSurfaceLayoutAttributes = BaseLayoutAttributes & {
@@ -91,15 +104,37 @@ export type SurfaceCurvedLineLayoutAttributes = SurfaceRandomLayoutAttributes & 
 	Layout_CurveSize0: UDim,
 	Layout_CurveSize1: UDim,
 }
+export type StackLayoutAttributes = BaseLayoutAttributes & {
+	Layout_PopulationLimit: NumberRange,
+	Layout_BasePadding: UDim,
+	Layout_TopPadding: UDim,
+}
+export type ArchLayoutAttributes = StackLayoutAttributes & { Layout_ArchShape: number }
+export type NGonLayoutAttributes = BaseLayoutAttributes & { Layout_Sides: number }
+export type GridLayoutAttributes = BaseLayoutAttributes & {
+	Source_Padding: UDim,
+	Layout_ColumnLimit: NumberRange,
+	Layout_RowLimit: NumberRange,
+	Layout_LayerLimit: NumberRange,
+}
+export type RandomLayoutAttributes = BaseLayoutAttributes & {
+	Source_Padding: UDim,
+	Layout_PopulationLimit: NumberRange,
+}
 -- Public model attributes contain only the fields owned by the selected layout.
 export type PackageAttributes = BaseSourceAttributes & SolverAttributes & BaseRandomAttributes & BaseLayoutAttributes & {
 	Source_Padding: UDim?,
 	Layout_SurfaceDetectionMethod: SurfaceDetectionMethod?,
 	Layout_ColumnLimit: NumberRange?,
 	Layout_RowLimit: NumberRange?,
+	Layout_LayerLimit: NumberRange?,
 	Layout_PopulationLimit: NumberRange?,
 	Layout_CurveSize0: UDim?,
 	Layout_CurveSize1: UDim?,
+	Layout_BasePadding: UDim?,
+	Layout_TopPadding: UDim?,
+	Layout_ArchShape: number?,
+	Layout_Sides: number?,
 }
 -- Internal math receives a complete snapshot, without adding hidden fields to the model.
 export type ResolvedPackageAttributes =
@@ -108,6 +143,9 @@ export type ResolvedPackageAttributes =
 	& BaseRandomAttributes
 	& SurfaceGridLayoutAttributes
 	& SurfaceCurvedLineLayoutAttributes
+	& ArchLayoutAttributes
+	& NGonLayoutAttributes
+	& GridLayoutAttributes
 export type GenerationFunctionParams<Attributes> = {
 	Attributes: Attributes,
 	Size: Vector3,
@@ -127,10 +165,12 @@ export type ParameterDefinition = {
 	TemplateOverride: boolean,
 }
 export type ParameterSchema = { [string]: ParameterDefinition }
-export type Cell = { Frame: CFrame, Size: Vector3, Offset: Vector3? }
+export type Cell = { Frame: CFrame, Size: Vector3, Offset: Vector3?, FitSize: Vector3? }
 export type Layout = {
 	Parameters: ParameterSchema,
-	-- The size argument is the largest source bound after area fitting and random scale.
+	Surface: boolean?,
+	Volume: boolean?,
+	-- Largest measured source bound; volume layouts use authored bounds before cell fitting.
 	GetCells: (Parameters, Vector3, Random) -> { Cell },
 }
 

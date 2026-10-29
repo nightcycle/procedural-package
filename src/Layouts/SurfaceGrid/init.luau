@@ -5,6 +5,7 @@ local Types = require(script.Parent.Parent.Types)
 local Util = require(script.Parent.Util)
 
 local Layout: Types.Layout = {
+	Surface = true,
 	Parameters = {
 		Source_Padding = Util.Padding,
 		Layout_SurfaceDetectionMethod = Util.SurfaceDetection,

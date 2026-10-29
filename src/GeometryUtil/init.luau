@@ -47,7 +47,16 @@ function Util.getExtents(instance: Template): (CFrame, Vector3)
 		return instance:GetBoundingBox()
 	end
 end
-function Util.getGeneratedPivot(instance: Template, method: Types.PivotMethod): CFrame
+function Util.heightRotation(axis: Types.HeightAxis): CFrame
+	if axis == "X" then
+		return CFrame.Angles(0, 0, math.pi / 2)
+	elseif axis == "Z" then
+		return CFrame.Angles(-math.pi / 2, 0, 0)
+	end
+	return CFrame.identity
+end
+
+function Util.getGeneratedPivot(instance: Template, method: Types.PivotMethod, heightAxis: Types.HeightAxis?): CFrame
 	local primaryMethod: Types.PivotMethod? = if method == "PrimaryPartPivot"
 		then "Pivot"
 		elseif method == "PrimaryPartCenter" then "Center"
@@ -64,10 +73,14 @@ function Util.getGeneratedPivot(instance: Template, method: Types.PivotMethod): 
 		return instance:GetPivot()
 	end
 	local frame, size = Util.getExtents(instance)
+	local height = if heightAxis == "X"
+		then Vector3.xAxis * size.X
+		elseif heightAxis == "Z" then Vector3.zAxis * size.Z
+		else Vector3.yAxis * size.Y
 	if method == "Bottom" then
-		return frame * CFrame.new(0, -size.Y / 2, 0)
+		return frame * CFrame.new(-height / 2)
 	elseif method == "Top" then
-		return frame * CFrame.new(0, size.Y / 2, 0)
+		return frame * CFrame.new(height / 2)
 	end
 	return frame
 end

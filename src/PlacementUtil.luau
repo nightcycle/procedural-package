@@ -5,6 +5,7 @@ local SourceUtil = require(script.Parent.SourceUtil)
 local SurfaceUtil = require(script.Parent.SurfaceUtil)
 local GeometryUtil = require(script.Parent.GeometryUtil)
 local DebugUtil = require(script.Parent.DebugUtil)
+local Layouts = require(script.Parent.Layouts)
 local Util = {}
 
 local function containSurfaceOrigin(instance: Types.Template, origin: CFrame, areaSize: Vector3): CFrame
@@ -24,8 +25,9 @@ function Util.run(
 	model: ProceduralModel?
 )
 	local areaAttributes = parameters.Attributes
+	local surface = Layouts[areaAttributes.Layout_Type].Surface == true
 	local solver = if #copies > 0
-			and areaAttributes.Layout_Type ~= "Single"
+			and surface
 			and areaAttributes.Layout_SurfaceDetectionMethod ~= "None"
 		then SurfaceUtil.getSolver(parameters)
 		else nil
@@ -47,24 +49,32 @@ function Util.run(
 			)
 		local range = attributes.Random_Scale
 		local scale = if range.Min == range.Max then range.Min else random:NextNumber(range.Min, range.Max)
-		local instance = SourceUtil.prepareForLayout(copy.Template, scoped, scale)
-		instance:PivotTo(rotation)
+		local instance = SourceUtil.prepareForLayout(copy.Template, scoped, scale, cell.FitSize)
+		instance:PivotTo(rotation * instance:GetPivot().Rotation)
 		local center = cell.Frame.Position
 		if cell.Offset then
 			local _, boundsSize = GeometryUtil.getBounds(instance)
 			local available = (cell.Size - boundsSize):Max(Vector3.zero)
 			center += cell.Offset * available
 		end
-		if attributes.Source_Alignment == "Floor" then
+		if attributes.Source_Alignment == "Floor" and (surface or attributes.Layout_Type == "Single") then
 			center = Vector3.new(center.X, -parameters.Size.Y / 2, center.Z)
+		end
+		if not surface and attributes.Layout_Type ~= "Single" then
+			-- Volume and solid-shape cells position geometry centers, independent of source pivots.
+			local frame, size = GeometryUtil.getBounds(instance)
+			if Layouts[attributes.Layout_Type].Volume then
+				local available = (parameters.Size - size):Max(Vector3.zero) / 2
+				center = center:Max(-available):Min(available)
+			end
+			center -= frame.Position - instance:GetPivot().Position
 		end
 		local initialOrigin = CFrame.new(center) * instance:GetPivot().Rotation
 		if isCurveEndpoint then
 			initialOrigin = containSurfaceOrigin(instance, initialOrigin, parameters.Size)
 		end
-		local origin = if attributes.Layout_Type == "Single"
-			then initialOrigin
-			else SurfaceUtil.detect(
+		local origin = if surface
+			then SurfaceUtil.detect(
 				instance,
 				initialOrigin,
 				scoped,
@@ -74,6 +84,7 @@ function Util.run(
 				model,
 				solver
 			)
+			else initialOrigin
 		if not origin then
 			instance:Destroy()
 			continue

@@ -18,6 +18,27 @@ end, Types.SurfaceDetectionMethod)
 Util.Population = Schema.field(function()
 	return ENV.DEFAULT_LAYOUT_POPULATION_LIMIT
 end, Schema.countRange)
+Util.BasePadding = Schema.field(function()
+	return ENV.DEFAULT_LAYOUT_BASE_PADDING
+end, Util.Padding.Validate)
+Util.TopPadding = Schema.field(function()
+	return ENV.DEFAULT_LAYOUT_TOP_PADDING
+end, Util.Padding.Validate)
+
+function Util.insetXZ(size: Vector3, padding: UDim): Vector3
+	local inset = Vector3.new(
+		(size.X - padding.Offset * 2) * (1 - padding.Scale * 2),
+		size.Y,
+		(size.Z - padding.Offset * 2) * (1 - padding.Scale * 2)
+	)
+	assert(inset.X > 0 and inset.Z > 0, "layout padding leaves no room in X/Z")
+	return inset
+end
+
+function Util.taperPadding(parameters: Types.Parameters, alpha: number): UDim
+	local base, top = parameters.Attributes.Layout_BasePadding, parameters.Attributes.Layout_TopPadding
+	return UDim.new(base.Scale + (top.Scale - base.Scale) * alpha, base.Offset + (top.Offset - base.Offset) * alpha)
+end
 
 function Util.pause(parameters: Types.Parameters, index: number)
 	if index % parameters.Attributes.Layout_PauseInterval == 0 then
@@ -56,6 +77,29 @@ function Util.grid(parameters: Types.Parameters, columns: number, rows: number, 
 				Size = cellSize,
 			})
 			Util.pause(parameters, #cells)
+		end
+	end
+	return cells
+end
+
+-- Partition all three dimensions; each template is fitted to its own cell.
+function Util.volume(parameters: Types.Parameters, columns: number, layers: number, rows: number): { Types.Cell }
+	if columns == 0 or layers == 0 or rows == 0 then
+		return {}
+	end
+	local size = parameters.Size
+	local cellSize = size / Vector3.new(columns, layers, rows)
+	local cells: { Types.Cell } = {}
+	for layer = 1, layers do
+		for row = 1, rows do
+			for column = 1, columns do
+				table.insert(cells, {
+					Frame = CFrame.new(-size / 2 + cellSize * Vector3.new(column - 0.5, layer - 0.5, row - 0.5)),
+					Size = cellSize,
+					FitSize = cellSize,
+				})
+				Util.pause(parameters, #cells)
+			end
 		end
 	end
 	return cells

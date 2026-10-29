@@ -78,6 +78,7 @@ local function parameterAtDistance(samples: { ArcSample }, length: number, fract
 end
 
 local Layout: Types.Layout & { GetControlPoints: typeof(getControlPoints) } = {
+	Surface = true,
 	GetControlPoints = getControlPoints,
 	Parameters = {
 		Source_Padding = Util.Padding,
